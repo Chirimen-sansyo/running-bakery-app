@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ランニング×パン屋さん</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --primary: #e67e22;
+    --primary-dark: #d35400;
+    --bg: #fdf6ec;
+    --panel-bg: #ffffff;
+    --text: #2c3e50;
+    --text-light: #7f8c8d;
+    --border: #e0d5c7;
+    --accent: #27ae60;
+    --danger: #e74c3c;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+
+  header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 1.2rem; font-weight: 700; }
+  header .subtitle { font-size: 0.75rem; opacity: 0.85; }
+
+  .app { display: flex; flex: 1; overflow: hidden; }
+
+  .panel {
+    width: 360px; min-width: 320px; background: var(--panel-bg);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .form-section { padding: 16px; border-bottom: 1px solid var(--border); }
+  .form-section h2 { font-size: 0.85rem; color: var(--primary-dark); margin-bottom: 10px; }
+
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 0.78rem; font-weight: 600; margin-bottom: 4px; color: var(--text-light); }
+  .field input[type="text"], .field input[type="time"], .field input[type="number"], .field select {
+    width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 6px;
+    font-size: 0.9rem; outline: none; transition: border-color 0.2s; background: #fff;
+  }
+  .field input:focus, .field select:focus { border-color: var(--primary); }
+
+  .radio-group { display: flex; gap: 8px; }
+  .radio-group label {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
+    padding: 8px; border: 1.5px solid var(--border); border-radius: 6px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 500; transition: all 0.2s;
+  }
+  .radio-group input:checked + span { color: var(--primary-dark); }
+  .radio-group label:has(input:checked) { border-color: var(--primary); background: #fef3e6; }
+  .radio-group input { display: none; }
+
+  .time-row { display: flex; gap: 8px; }
+  .time-row .field { flex: 1; }
+
+  .btn-search {
+    width: 100%; padding: 12px; background: var(--primary); color: #fff;
+    border: none; border-radius: 8px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-search:hover { background: var(--primary-dark); }
+  .btn-search:disabled { background: #bbb; cursor: not-allowed; }
+
+  .results-section { flex: 1; overflow-y: auto; }
+  .results-header {
+    padding: 12px 16px; font-size: 0.8rem; color: var(--text-light);
+    border-bottom: 1px solid var(--border); background: #fafafa; position: sticky; top: 0;
+  }
+
+  .bakery-item {
+    padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer;
+    transition: background 0.15s;
+  }
+  .bakery-item:hover { background: #fef9f2; }
+  .bakery-item.active { background: #fef3e6; border-left: 3px solid var(--primary); }
+  .bakery-item .name { font-weight: 600; font-size: 0.9rem; }
+  .bakery-item .addr { font-size: 0.72rem; color: var(--text); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bakery-item .meta { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; display: flex; gap: 12px; }
+  .bakery-item .tag {
+    display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.68rem; font-weight: 600;
+  }
+  .tag-open { background: #e8f8f0; color: var(--accent); }
+  .tag-closed { background: #fde8e8; color: var(--danger); }
+  .tag-unknown { background: #eee; color: #999; }
+
+  .map-container { flex: 1; position: relative; }
+  #map { width: 100%; height: 100%; }
+
+  .detail-panel {
+    display: none; position: absolute; bottom: 20px; left: 20px; right: 20px;
+    background: var(--panel-bg); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 16px; z-index: 1000; max-width: 400px;
+  }
+  .detail-panel.show { display: block; }
+  .detail-panel .close-btn {
+    position: absolute; top: 8px; right: 12px; background: none; border: none;
+    font-size: 1.2rem; cursor: pointer; color: var(--text-light);
+  }
+  .detail-panel h3 { font-size: 1rem; margin-bottom: 8px; padding-right: 24px; }
+  .detail-panel .info-row { font-size: 0.82rem; margin-bottom: 4px; color: var(--text); }
+  .detail-panel .info-row strong { color: var(--text-light); min-width: 80px; display: inline-block; }
+  .detail-panel .gmaps-link, .detail-panel .tabelog-link {
+    display: inline-block; margin-top: 10px; padding: 8px 16px;
+    color: #fff; text-decoration: none; border-radius: 6px;
+    font-size: 0.85rem; font-weight: 600;
+  }
+  .detail-panel .gmaps-link { background: #4285f4; }
+  .detail-panel .tabelog-link { background: #e63e1a; margin-left: 6px; }
+
+  .loading-overlay {
+    display: none; position: absolute; inset: 0; background: rgba(255,255,255,0.8);
+    z-index: 1001; justify-content: center; align-items: center; flex-direction: column; gap: 12px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 40px; height: 40px; border: 4px solid var(--border);
+    border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-overlay .msg { font-size: 0.9rem; color: var(--text-light); }
+
+  .empty-msg { padding: 32px 16px; text-align: center; color: var(--text-light); font-size: 0.85rem; }
+
+  /* --- AI入力セクション --- */
+  .ai-section {
+    padding: 16px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #fef9f2, #fff5e6);
+  }
+  .ai-section h2 {
+    font-size: 0.85rem; color: var(--primary-dark); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ai-section h2 .ai-badge {
+    background: var(--primary); color: #fff; font-size: 0.65rem;
+    padding: 1px 6px; border-radius: 10px; font-weight: 700;
+  }
+  .ai-textarea {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px;
+    font-size: 0.88rem; font-family: inherit; resize: vertical; min-height: 60px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .ai-textarea:focus { border-color: var(--primary); }
+  .ai-textarea::placeholder { color: #bbb; }
+  .btn-ai-parse {
+    margin-top: 8px; width: 100%; padding: 10px; background: #8e44ad; color: #fff;
+    border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-ai-parse:hover { background: #7d3c98; }
+  .btn-ai-parse:disabled { background: #bbb; cursor: not-allowed; }
+  .ai-status {
+    margin-top: 6px; font-size: 0.75rem; color: var(--text-light);
+    min-height: 1.2em;
+  }
+
+  /* --- AIおすすめセクション --- */
+  .ai-recommend-section {
+    display: none; padding: 12px 16px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #f0e6ff, #fef9f2);
+  }
+  .ai-recommend-section.show { display: block; }
+  .ai-recommend-section h3 {
+    font-size: 0.82rem; color: #8e44ad; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ai-recommend-section h3 .ai-badge {
+    background: #8e44ad; color: #fff; font-size: 0.65rem;
+    padding: 1px 6px; border-radius: 10px; font-weight: 700;
+  }
+  .recommend-card {
+    background: #fff; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-left: 3px solid #8e44ad;
+  }
+  .recommend-card .rec-name {
+    font-weight: 700; font-size: 0.88rem; color: var(--text);
+  }
+  .recommend-card .rec-reason {
+    font-size: 0.78rem; color: var(--text-light); margin-top: 4px;
+    line-height: 1.4;
+  }
+  .ai-recommend-loading {
+    text-align: center; padding: 12px; font-size: 0.8rem; color: #8e44ad;
+  }
+  .ai-recommend-loading .spinner-small {
+    display: inline-block; width: 16px; height: 16px; border: 2px solid #e0d5c7;
+    border-top-color: #8e44ad; border-radius: 50%; animation: spin 0.8s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .app { flex-direction: column; }
+    .panel { width: 100%; min-width: unset; max-height: 45vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .map-container { min-height: 40vh; }
+    .detail-panel { left: 10px; right: 10px; bottom: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>ランニング × パン屋さん</h1>
+    <div class="subtitle">走るコースの途中で美味しいパン屋を見つけよう</div>
+  </div>
+</header>
+
+<div class="app">
+  <div class="panel">
+    <!-- AI自然言語入力セクション -->
+    <div class="ai-section">
+      <h2><span class="ai-badge">AI</span> AIで入力</h2>
+      <textarea class="ai-textarea" id="ai-input" placeholder="例: 朝7時に皇居ラン、帰りにクロワッサン買いたい"></textarea>
+      <button class="btn-ai-parse" id="btn-ai-parse" onclick="aiParse()">AIで解析</button>
+      <div class="ai-status" id="ai-status"></div>
+    </div>
+
+    <div class="form-section">
+      <h2>コース設定</h2>
+      <div class="field">
+        <label>始点</label>
+        <input type="text" id="origin" placeholder="例：東京駅" value="東京駅">
+      </div>
+      <div class="field">
+        <label>目的地</label>
+        <input type="text" id="destination" placeholder="例：渋谷駅">
+      </div>
+
+      <h2 style="margin-top:12px;">時間設定</h2>
+      <div class="time-row">
+        <div class="field">
+          <label>出発時刻</label>
+          <input type="time" id="departure-time" value="08:00">
+        </div>
+        <div class="field">
+          <label>所要時間（分）</label>
+          <input type="number" id="duration" value="60" min="10" max="300" step="5">
+        </div>
+      </div>
+      <div class="field">
+        <label>走る曜日</label>
+        <select id="day-of-week">
+          <option value="mo">月曜日</option>
+          <option value="tu">火曜日</option>
+          <option value="we">水曜日</option>
+          <option value="th">木曜日</option>
+          <option value="fr">金曜日</option>
+          <option value="sa">土曜日</option>
+          <option value="su">日曜日</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>到着予定時刻: <span id="arrival-display" style="color:var(--primary-dark);font-weight:700;">09:00</span></label>
+      </div>
+
+      <h2 style="margin-top:12px;">パン種別</h2>
+      <div class="field">
+        <div class="radio-group">
+          <label><input type="radio" name="bread-type" value="soft" checked><span>ソフト（菓子パン系）</span></label>
+          <label><input type="radio" name="bread-type" value="hard"><span>ハード（本格パン）</span></label>
+        </div>
+      </div>
+
+      <button class="btn-search" id="btn-search" onclick="doSearch()">パン屋を検索</button>
+    </div>
+
+    <div class="results-section">
+      <!-- AIおすすめセクション（検索後に表示） -->
+      <div class="ai-recommend-section" id="ai-recommend-section">
+        <h3><span class="ai-badge">AI</span> AIおすすめ</h3>
+        <div id="ai-recommend-content">
+          <div class="ai-recommend-loading">
+            <span class="spinner-small"></span>AIがおすすめを分析中...
+          </div>
+        </div>
+      </div>
+
+      <div class="results-header" id="results-header">検索結果がここに表示されます</div>
+      <div id="results-list">
+        <div class="empty-msg">始点と目的地を入力して検索してください</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="loading-overlay" id="loading">
+      <div class="spinner"></div>
+      <div class="msg" id="loading-msg">検索中...</div>
+    </div>
+    <div class="detail-panel" id="detail-panel">
+      <button class="close-btn" onclick="closeDetail()">&times;</button>
+      <h3 id="detail-name"></h3>
+      <div class="info-row"><strong>住所:</strong> <span id="detail-address"></span></div>
+      <div class="info-row"><strong>営業時間:</strong> <span id="detail-hours"></span></div>
+      <div class="info-row"><strong>種別:</strong> <span id="detail-type"></span></div>
+      <div class="info-row"><strong>経路からの距離:</strong> <span id="detail-distance"></span></div>
+      <div class="info-row" id="detail-phone-row" style="display:none"><strong>電話:</strong> <span id="detail-phone"></span></div>
+      <div class="info-row" id="detail-website-row" style="display:none"><strong>サイト:</strong> <span id="detail-website"></span></div>
+      <a class="gmaps-link" id="detail-gmaps" href="#" target="_blank" rel="noopener">Google Maps で開く</a>
+      <a class="tabelog-link" id="detail-tabelog" href="#" target="_blank" rel="noopener">食べログで検索</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- Map init ---
+const map = L.map('map').setView([35.6812, 139.7671], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19
+}).addTo(map);
+
+let routeLayer = null;
+let bakeryMarkers = [];
+let routeCoords = [];
+
+// --- Arrival time calc ---
+const depInput = document.getElementById('departure-time');
+const durInput = document.getElementById('duration');
+const arrDisplay = document.getElementById('arrival-display');
+
+function updateArrival() {
+  const [h, m] = depInput.value.split(':').map(Number);
+  if (isNaN(h)) return;
+  const dur = parseInt(durInput.value) || 60;
+  const total = h * 60 + m + dur;
+  const ah = Math.floor(total / 60) % 24;
+  const am = total % 60;
+  arrDisplay.textContent = `${String(ah).padStart(2,'0')}:${String(am).padStart(2,'0')}`;
+}
+depInput.addEventListener('input', updateArrival);
+durInput.addEventListener('input', updateArrival);
+updateArrival();
+
+// --- Day of week default to today ---
+const dayOfWeekSelect = document.getElementById('day-of-week');
+const dayMap = ['su','mo','tu','we','th','fr','sa'];
+dayOfWeekSelect.value = dayMap[new Date().getDay()];
+
+function getArrivalMinutes() {
+  const [h, m] = depInput.value.split(':').map(Number);
+  const dur = parseInt(durInput.value) || 60;
+  return (h * 60 + m + dur) % 1440;
+}
+
+// --- Loading ---
+function showLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading').classList.remove('show');
+}
+
+// --- Geocode ---
+async function safeJson(res, apiName) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error(`${apiName} returned non-JSON:`, text.substring(0, 200));
+    throw new Error(`${apiName}からの応答を処理できませんでした（サーバーが混雑している可能性があります）`);
+  }
+}
+
+async function geocode(query) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=ja`;
+  const res = await fetch(url, { headers: { 'User-Agent': 'RunningBakeryApp/1.0' } });
+  const data = await safeJson(res, 'Nominatim');
+  if (!data.length) throw new Error(`「${query}」の場所が見つかりませんでした`);
+  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name };
+}
+
+// --- Reverse geocode (座標→住所) ---
+async function reverseGeocode(lat, lon) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=ja`;
+  const res = await fetch(url, { headers: { 'User-Agent': 'RunningBakeryApp/1.0' } });
+  const data = await safeJson(res, 'Nominatim(reverse)');
+  if (!data || data.error) return '';
+  const a = data.address || {};
+  const parts = [a.province || a.state, a.city || a.town || a.village,
+                 a.city_district || a.suburb || a.quarter,
+                 a.neighbourhood, a.road, a.house_number].filter(Boolean);
+  return parts.join(' ') || data.display_name || '';
+}
+
+// --- sleep util ---
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// --- Route (OSRM foot) ---
+async function getRoute(from, to) {
+  const url = `https://router.project-osrm.org/route/v1/foot/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  const data = await safeJson(res, 'OSRM');
+  if (!data.routes || !data.routes.length) throw new Error('経路が見つかりませんでした');
+  return data.routes[0].geometry.coordinates;
+}
+
+// --- Overpass bakery search ---
+async function searchBakeries(coords, breadType) {
+  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+  for (const [lon, lat] of coords) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+  }
+  const buf = 0.005;
+  minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
+  const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
+
+  const types = ['node', 'way', 'relation'];
+  let shopQueries;
+  if (breadType === 'soft') {
+    shopQueries = types.flatMap(t => [
+      `${t}["shop"="bakery"](${bbox})`,
+      `${t}["shop"="pastry"](${bbox})`,
+      `${t}["shop"="confectionery"](${bbox})`,
+      `${t}["craft"="bakery"](${bbox})`
+    ]);
+  } else {
+    shopQueries = types.flatMap(t => [
+      `${t}["shop"="bakery"](${bbox})`,
+      `${t}["craft"="bakery"](${bbox})`
+    ]);
+  }
+
+  const query = `[out:json][timeout:25];(${shopQueries.map(q=>q+';').join('')});out body center;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: `data=${encodeURIComponent(query)}`
+  });
+  const data = await safeJson(res, 'Overpass');
+  return (data.elements || []).map(el => {
+    if (el.type !== 'node' && el.center) {
+      el.lat = el.center.lat;
+      el.lon = el.center.lon;
+    }
+    return el;
+  }).filter(el => el.lat && el.lon);
+}
+
+// --- Distance from point to route ---
+function distToSegment(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  if (dx === 0 && dy === 0) return Math.sqrt((px-ax)**2 + (py-ay)**2);
+  let t = ((px-ax)*dx + (py-ay)*dy) / (dx*dx + dy*dy);
+  t = Math.max(0, Math.min(1, t));
+  return Math.sqrt((px - (ax + t*dx))**2 + (py - (ay + t*dy))**2);
+}
+
+function distToRoute(lat, lon, coords) {
+  let min = Infinity;
+  for (let i = 0; i < coords.length - 1; i += 3) {
+    const j = Math.min(i + 3, coords.length - 1);
+    const d = distToSegment(lon, lat, coords[i][0], coords[i][1], coords[j][0], coords[j][1]);
+    if (d < min) min = d;
+  }
+  return min * 111000 * Math.cos(lat * Math.PI / 180);
+}
+
+// --- Parse opening_hours with day-of-week support ---
+const ALL_DAYS = ['mo','tu','we','th','fr','sa','su'];
+
+function expandDayRange(daySpec) {
+  // Parse day specifications like "Mo-Fr", "Sa,Su", "Mo-We,Fr"
+  const result = [];
+  const parts = daySpec.split(',').map(s => s.trim().toLowerCase());
+  for (const part of parts) {
+    const rangeMatch = part.match(/^([a-z]{2})\s*-\s*([a-z]{2})$/);
+    if (rangeMatch) {
+      const start = ALL_DAYS.indexOf(rangeMatch[1]);
+      const end = ALL_DAYS.indexOf(rangeMatch[2]);
+      if (start === -1 || end === -1) continue;
+      for (let i = start; ; i = (i + 1) % 7) {
+        result.push(ALL_DAYS[i]);
+        if (i === end) break;
+      }
+    } else {
+      if (ALL_DAYS.includes(part)) result.push(part);
+    }
+  }
+  return result;
+}
+
+function parseOhSegments(ohStr) {
+  // Split by ";" and parse each segment into { days: [...], ranges: [[open,close],...] }
+  if (!ohStr) return [];
+  const segments = ohStr.split(';').map(s => s.trim()).filter(Boolean);
+  const result = [];
+  for (const seg of segments) {
+    // Try to match day spec before time ranges
+    const timeRanges = [];
+    const timeMatches = seg.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/g);
+    if (!timeMatches) continue;
+    for (const tm of timeMatches) {
+      const p = tm.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+      if (p) timeRanges.push([parseInt(p[1])*60+parseInt(p[2]), parseInt(p[3])*60+parseInt(p[4])]);
+    }
+    // Extract day spec: everything before the first time
+    const firstTimeIdx = seg.search(/\d{1,2}:\d{2}/);
+    const dayPart = firstTimeIdx > 0 ? seg.substring(0, firstTimeIdx).trim().replace(/,\s*$/, '') : '';
+    const days = dayPart ? expandDayRange(dayPart) : null; // null means all days
+    result.push({ days, timeRanges });
+  }
+  return result;
+}
+
+function isOpenAt(ohStr, minutesOfDay, dow) {
+  if (!ohStr) return null;
+  const segments = parseOhSegments(ohStr);
+  if (segments.length === 0) return null;
+
+  for (const seg of segments) {
+    // Check if this segment applies to the given day
+    if (seg.days && dow && !seg.days.includes(dow)) continue;
+    for (const [openMin, closeMin] of seg.timeRanges) {
+      if (minutesOfDay >= openMin && minutesOfDay <= closeMin) return true;
+    }
+  }
+  return false;
+}
+
+// --- 開店時刻を取得（分） ---
+function getOpeningMinutes(ohStr, dow) {
+  if (!ohStr) return null;
+  const segments = parseOhSegments(ohStr);
+  if (segments.length === 0) return null;
+  let earliest = Infinity;
+  for (const seg of segments) {
+    if (seg.days && dow && !seg.days.includes(dow)) continue;
+    for (const [openMin] of seg.timeRanges) {
+      if (openMin < earliest) earliest = openMin;
+    }
+  }
+  return earliest === Infinity ? null : earliest;
+}
+
+// --- Bread icons ---
+function makeBakeryIcon(color) {
+  return L.divIcon({
+    html: `<div style="background:${color};color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">🍞</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    className: ''
+  });
+}
+const bakeryIconOpen = makeBakeryIcon('#e67e22');
+const bakeryIconUnknown = makeBakeryIcon('#999');
+
+const startIcon = L.divIcon({
+  html: '<div style="background:#27ae60;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">S</div>',
+  iconSize: [28, 28], iconAnchor: [14, 14], className: ''
+});
+
+const goalIcon = L.divIcon({
+  html: '<div style="background:#e74c3c;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">G</div>',
+  iconSize: [28, 28], iconAnchor: [14, 14], className: ''
+});
+
+// --- Clear map ---
+function clearMap() {
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  bakeryMarkers.forEach(m => map.removeLayer(m));
+  bakeryMarkers = [];
+}
+
+// --- Detail panel ---
+function showDetail(b) {
+  document.getElementById('detail-name').textContent = b.name;
+  document.getElementById('detail-address').textContent = b.address || '不明';
+  const hoursEl = document.getElementById('detail-hours');
+  if (b.hours) {
+    hoursEl.textContent = b.hours;
+  } else {
+    const gq = encodeURIComponent(b.name + ' 営業時間');
+    hoursEl.innerHTML = `<a href="https://www.google.com/search?q=${gq}" target="_blank" rel="noopener" style="color:#e67e22;">Googleで確認 &rarr;</a>`;
+  }
+  document.getElementById('detail-type').textContent = b.shopType === 'bakery' ? 'ベーカリー' : b.shopType === 'pastry' ? 'ペストリー' : b.shopType === 'confectionery' ? '菓子店' : b.shopType;
+  document.getElementById('detail-distance').textContent = `約 ${b.dist}m`;
+  document.getElementById('detail-gmaps').href = `https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lon}`;
+  document.getElementById('detail-tabelog').href = `https://tabelog.com/rstLst/?vs=1&sa=&sk=${encodeURIComponent(b.name)}&lid=&vac_net=&svd=&svt=&svps=&svpe=&hfc=1&sw=${encodeURIComponent(b.name)}`;
+
+  const phoneRow = document.getElementById('detail-phone-row');
+  if (b.phone) { document.getElementById('detail-phone').textContent = b.phone; phoneRow.style.display = ''; }
+  else { phoneRow.style.display = 'none'; }
+
+  const webRow = document.getElementById('detail-website-row');
+  if (b.website) {
+    document.getElementById('detail-website').innerHTML = `<a href="${escHtml(b.website)}" target="_blank" rel="noopener" style="color:#3498db;">${escHtml(b.website.replace(/^https?:\/\//, '').slice(0,30))}</a>`;
+    webRow.style.display = '';
+  } else { webRow.style.display = 'none'; }
+
+  document.getElementById('detail-panel').classList.add('show');
+
+  document.querySelectorAll('.bakery-item').forEach(el => el.classList.remove('active'));
+  const item = document.querySelector(`.bakery-item[data-id="${b.id}"]`);
+  if (item) item.classList.add('active');
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('show');
+  document.querySelectorAll('.bakery-item').forEach(el => el.classList.remove('active'));
+}
+
+// ===========================================
+// AI自然言語解析
+// ===========================================
+async function aiParse() {
+  const text = document.getElementById('ai-input').value.trim();
+  if (!text) { alert('テキストを入力してください'); return; }
+
+  const btn = document.getElementById('btn-ai-parse');
+  const status = document.getElementById('ai-status');
+  btn.disabled = true;
+  status.textContent = 'AIが解析中...';
+
+  try {
+    const res = await fetch('/api/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'API error');
+    }
+
+    const data = await res.json();
+
+    // フォームに自動入力
+    if (data.origin) document.getElementById('origin').value = data.origin;
+    if (data.destination) document.getElementById('destination').value = data.destination;
+    if (data.departureTime) {
+      depInput.value = data.departureTime;
+      updateArrival();
+    }
+    if (data.duration) {
+      durInput.value = data.duration;
+      updateArrival();
+    }
+    if (data.breadType) {
+      const radio = document.querySelector(`input[name="bread-type"][value="${data.breadType}"]`);
+      if (radio) radio.checked = true;
+    }
+    if (data.dayOfWeek && ['mo','tu','we','th','fr','sa','su'].includes(data.dayOfWeek)) {
+      dayOfWeekSelect.value = data.dayOfWeek;
+    }
+
+    // 入力された項目を表示
+    const filled = [];
+    if (data.origin) filled.push('始点');
+    if (data.destination) filled.push('目的地');
+    if (data.departureTime) filled.push('出発時刻');
+    if (data.duration) filled.push('所要時間');
+    if (data.breadType) filled.push('パン種別');
+    if (data.dayOfWeek) filled.push('曜日');
+    status.textContent = filled.length
+      ? `解析完了: ${filled.join('、')} を入力しました`
+      : '解析完了: 抽出できる情報がありませんでした';
+
+  } catch (err) {
+    status.textContent = 'エラー: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ===========================================
+// AIおすすめ取得
+// ===========================================
+async function fetchAiRecommend(bakeries, originText, destText, breadType, dow) {
+  const section = document.getElementById('ai-recommend-section');
+  const content = document.getElementById('ai-recommend-content');
+
+  if (bakeries.length === 0) {
+    section.classList.remove('show');
+    return;
+  }
+
+  // 表示開始（ローディング）
+  section.classList.add('show');
+  content.innerHTML = '<div class="ai-recommend-loading"><span class="spinner-small"></span>AIがおすすめを分析中...</div>';
+
+  try {
+    const res = await fetch('/api/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bakeries: bakeries.map(b => ({
+          name: b.name, dist: b.dist, hours: b.hours, address: b.address
+        })),
+        origin: originText,
+        destination: destText,
+        breadType,
+        dayOfWeek: dow,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'API error');
+    }
+
+    const data = await res.json();
+    const recs = data.recommendations || [];
+
+    if (recs.length === 0) {
+      content.innerHTML = '<div class="ai-recommend-loading">おすすめを生成できませんでした</div>';
+      return;
+    }
+
+    content.innerHTML = recs.map(r =>
+      `<div class="recommend-card">
+        <div class="rec-name">${escHtml(r.name)}</div>
+        <div class="rec-reason">${escHtml(r.reason)}</div>
+      </div>`
+    ).join('');
+
+  } catch (err) {
+    content.innerHTML = `<div class="ai-recommend-loading">エラー: ${escHtml(err.message)}</div>`;
+  }
+}
+
+// ===========================================
+// Main search
+// ===========================================
+async function doSearch() {
+  const originText = document.getElementById('origin').value.trim();
+  const destText = document.getElementById('destination').value.trim();
+  if (!originText || !destText) { alert('始点と目的地を入力してください'); return; }
+
+  const breadType = document.querySelector('input[name="bread-type"]:checked').value;
+  const arrivalMin = getArrivalMinutes();
+  const selectedDow = dayOfWeekSelect.value;
+  const btn = document.getElementById('btn-search');
+  btn.disabled = true;
+  closeDetail();
+  clearMap();
+
+  // AIおすすめを非表示にリセット
+  document.getElementById('ai-recommend-section').classList.remove('show');
+
+  try {
+    // 1. Geocode
+    showLoading('場所を検索中...');
+    const [origin, dest] = await Promise.all([geocode(originText), geocode(destText)]);
+
+    // 2. Route
+    showLoading('ランニングルートを計算中...');
+    routeCoords = await getRoute(origin, dest);
+
+    // Draw route
+    const latLngs = routeCoords.map(([lon, lat]) => [lat, lon]);
+    routeLayer = L.layerGroup().addTo(map);
+
+    L.polyline(latLngs, { color: '#2c3e50', weight: 7, opacity: 0.3 }).addTo(routeLayer);
+    L.polyline(latLngs, { color: '#3498db', weight: 4, opacity: 0.85 }).addTo(routeLayer);
+
+    L.marker([origin.lat, origin.lon], { icon: startIcon }).addTo(routeLayer).bindPopup(`始点: ${originText}`);
+    L.marker([dest.lat, dest.lon], { icon: goalIcon }).addTo(routeLayer).bindPopup(`目的地: ${destText}`);
+
+    map.fitBounds(L.latLngBounds(latLngs).pad(0.1));
+
+    // 3. Bakery search
+    showLoading('パン屋を検索中...');
+    const rawBakeries = await searchBakeries(routeCoords, breadType);
+
+    // 4. Filter by distance to route (<= 500m)
+    let bakeries = rawBakeries.map(el => {
+      const tags = el.tags || {};
+      const dist = Math.round(distToRoute(el.lat, el.lon, routeCoords));
+
+      let address = tags['addr:full'] || '';
+      if (!address) {
+        const parts = [tags['addr:province'], tags['addr:city'], tags['addr:quarter'],
+                       tags['addr:neighbourhood'], tags['addr:block_number'],
+                       tags['addr:street'], tags['addr:housenumber']].filter(Boolean);
+        address = parts.join(' ');
+      }
+
+      const hours = tags.opening_hours || tags['opening_hours:covid19'] || '';
+      const phone = tags.phone || tags['contact:phone'] || '';
+      const website = tags.website || tags['contact:website'] || '';
+
+      return {
+        id: el.id,
+        lat: el.lat,
+        lon: el.lon,
+        name: tags.name || tags['name:ja'] || tags['name:en'] || '名称不明のパン屋',
+        address,
+        hours,
+        phone,
+        website,
+        shopType: tags.shop || tags.craft || 'bakery',
+        dist,
+        isOpen: isOpenAt(hours, arrivalMin, selectedDow)
+      };
+    }).filter(b => b.dist <= 500);
+
+    // 4.5 出発時刻より早く開店している店のみ残す
+    const [depH, depM] = depInput.value.split(':').map(Number);
+    const departureMin = depH * 60 + depM;
+    bakeries = bakeries.filter(b => {
+      const openMin = getOpeningMinutes(b.hours, selectedDow);
+      if (openMin === null) return true;
+      return openMin <= departureMin;
+    });
+
+    // 5. Sort: open first, then by distance
+    bakeries.sort((a, b) => {
+      if (a.isOpen === true && b.isOpen !== true) return -1;
+      if (b.isOpen === true && a.isOpen !== true) return 1;
+      return a.dist - b.dist;
+    });
+
+    // 5.5 Reverse geocode で住所を補完
+    showLoading(`住所情報を取得中... (0/${bakeries.length})`);
+    for (let i = 0; i < bakeries.length; i++) {
+      const b = bakeries[i];
+      showLoading(`住所情報を取得中... (${i+1}/${bakeries.length})`);
+      if (!b.address) {
+        try {
+          b.address = await reverseGeocode(b.lat, b.lon);
+        } catch(e) { /* ignore */ }
+      }
+      if (i < bakeries.length - 1) await sleep(1100);
+    }
+
+    // 6. Display markers
+    bakeries.forEach(b => {
+      const icon = b.hours ? bakeryIconOpen : bakeryIconUnknown;
+      const marker = L.marker([b.lat, b.lon], { icon })
+        .addTo(map)
+        .on('click', () => showDetail(b));
+      marker.bindTooltip(b.name, { direction: 'top', offset: [0, -15] });
+      bakeryMarkers.push(marker);
+    });
+
+    // 7. Display list
+    const header = document.getElementById('results-header');
+    header.textContent = `${bakeries.length} 件のパン屋が見つかりました`;
+
+    const list = document.getElementById('results-list');
+    if (bakeries.length === 0) {
+      list.innerHTML = '<div class="empty-msg">経路沿いにパン屋が見つかりませんでした。<br>検索範囲は経路から500m以内です。</div>';
+    } else {
+      list.innerHTML = bakeries.map(b => {
+        const openTag = b.isOpen === true ? '<span class="tag tag-open">営業中</span>'
+          : b.isOpen === false ? '<span class="tag tag-closed">営業時間外</span>'
+          : '<span class="tag tag-unknown">時間不明</span>';
+        const addrLine = b.address ? `<div class="addr">${escHtml(b.address)}</div>` : '';
+        const hoursText = b.hours ? escHtml(b.hours) : `<a href="https://www.google.com/search?q=${encodeURIComponent(b.name + ' 営業時間')}" target="_blank" rel="noopener" style="color:#e67e22;text-decoration:none;" onclick="event.stopPropagation()">営業時間をGoogleで確認</a>`;
+        return `<div class="bakery-item" data-id="${b.id}" onclick='showDetail(${JSON.stringify(b).replace(/'/g, "&#39;")})'>
+          <div class="name">${escHtml(b.name)} ${openTag}</div>
+          ${addrLine}
+          <div class="meta"><span>経路から ${b.dist}m</span><span>${hoursText}</span></div>
+          <div class="meta"><a href="https://tabelog.com/rstLst/?vs=1&sa=&sk=${encodeURIComponent(b.name)}&hfc=1&sw=${encodeURIComponent(b.name)}" target="_blank" rel="noopener" style="color:#e63e1a;text-decoration:none;font-weight:600;" onclick="event.stopPropagation()">食べログで検索</a></div>
+        </div>`;
+      }).join('');
+    }
+
+    // 8. AIおすすめを非同期で取得
+    fetchAiRecommend(bakeries, originText, destText, breadType, selectedDow);
+
+  } catch (e) {
+    alert('エラー: ' + e.message);
+    console.error(e);
+  } finally {
+    hideLoading();
+    btn.disabled = false;
+  }
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
