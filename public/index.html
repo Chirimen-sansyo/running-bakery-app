@@ -560,21 +560,32 @@ async function searchSakura(coords) {
     if (lon < minLon) minLon = lon;
     if (lon > maxLon) maxLon = lon;
   }
-  const buf = 0.005;
+  const buf = 0.008;
   minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
   const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
 
   const types = ['node', 'way', 'relation'];
   const queries = types.flatMap(t => [
-    `${t}["name"~"桜|さくら|サクラ|花見",i]["leisure"](${bbox})`,
-    `${t}["name"~"桜|さくら|サクラ|花見",i]["tourism"](${bbox})`,
-    `${t}["name"~"桜|さくら|サクラ|花見",i]["natural"](${bbox})`,
-    `${t}["natural"="tree"]["species"~"cherry|桜|sakura|cerasus",i](${bbox})`,
+    // 名前に桜・花見が含まれるあらゆるスポット（タグ制限なし）
+    `${t}["name"~"桜|さくら|サクラ|花見|cherry blossom",i](${bbox})`,
+    // 公園・庭園
+    `${t}["leisure"="park"]["name"~"桜|さくら|花見",i](${bbox})`,
+    `${t}["leisure"="garden"]["name"~"桜|さくら|花見",i](${bbox})`,
+    // 神社仏閣（桜の名所が多い）
+    `${t}["amenity"="place_of_worship"]["name"~"桜|さくら",i](${bbox})`,
+    // 桜の木
+    `${t}["natural"="tree"]["species"~"cherry|桜|sakura|cerasus|Prunus",i](${bbox})`,
     `${t}["natural"="tree"]["genus"="Prunus"](${bbox})`,
-    `${t}["name"~"桜並木|桜通り|桜坂|花見",i](${bbox})`
+    `${t}["natural"="tree_row"]["species"~"cherry|桜|sakura|Prunus",i](${bbox})`,
+    // 観光・名所
+    `${t}["tourism"~"attraction|viewpoint"]["name"~"桜|さくら|花見",i](${bbox})`,
+    // 桜並木・桜通りなど道路
+    `${t}["highway"]["name"~"桜|さくら|サクラ",i](${bbox})`,
+    // 川沿い（花見スポット）
+    `${t}["waterway"]["name"~"桜|さくら",i](${bbox})`
   ]);
 
-  const query = `[out:json][timeout:25];(${queries.map(q=>q+';').join('')});out body center;`;
+  const query = `[out:json][timeout:30];(${queries.map(q=>q+';').join('')});out body center;`;
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`
@@ -595,21 +606,32 @@ async function searchKoyo(coords) {
     if (lon < minLon) minLon = lon;
     if (lon > maxLon) maxLon = lon;
   }
-  const buf = 0.005;
+  const buf = 0.008;
   minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
   const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
 
   const types = ['node', 'way', 'relation'];
   const queries = types.flatMap(t => [
-    `${t}["name"~"紅葉|もみじ|モミジ|イチョウ|銀杏|いちょう",i]["leisure"](${bbox})`,
-    `${t}["name"~"紅葉|もみじ|モミジ|イチョウ|銀杏|いちょう",i]["tourism"](${bbox})`,
-    `${t}["name"~"紅葉|もみじ|モミジ|イチョウ|銀杏|いちょう",i]["natural"](${bbox})`,
-    `${t}["natural"="tree"]["species"~"maple|イチョウ|銀杏|ginkgo|momiji|もみじ",i](${bbox})`,
-    `${t}["natural"="tree"]["genus"~"Acer|Ginkgo",i](${bbox})`,
-    `${t}["name"~"紅葉坂|いちょう並木|銀杏並木",i](${bbox})`
+    // 名前に紅葉・イチョウが含まれるあらゆるスポット（タグ制限なし）
+    `${t}["name"~"紅葉|もみじ|モミジ|イチョウ|銀杏|いちょう|楓|カエデ|かえで",i](${bbox})`,
+    // 公園・庭園
+    `${t}["leisure"="park"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bbox})`,
+    `${t}["leisure"="garden"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bbox})`,
+    // 神社仏閣（紅葉の名所が多い）
+    `${t}["amenity"="place_of_worship"]["name"~"紅葉|もみじ|楓",i](${bbox})`,
+    // 紅葉・イチョウの木
+    `${t}["natural"="tree"]["species"~"maple|ginkgo|イチョウ|銀杏|もみじ|モミジ|楓|Acer|Ginkgo",i](${bbox})`,
+    `${t}["natural"="tree"]["genus"~"Acer|Ginkgo"](${bbox})`,
+    `${t}["natural"="tree_row"]["species"~"ginkgo|Acer|イチョウ|銀杏",i](${bbox})`,
+    // 観光・名所
+    `${t}["tourism"~"attraction|viewpoint"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bbox})`,
+    // 並木道
+    `${t}["highway"]["name"~"紅葉|もみじ|イチョウ|銀杏|いちょう",i](${bbox})`,
+    // 川沿い
+    `${t}["waterway"]["name"~"紅葉|もみじ",i](${bbox})`
   ]);
 
-  const query = `[out:json][timeout:25];(${queries.map(q=>q+';').join('')});out body center;`;
+  const query = `[out:json][timeout:30];(${queries.map(q=>q+';').join('')});out body center;`;
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`
@@ -969,14 +991,17 @@ async function doSearch() {
       return;
     }
 
-    showLoading('スポットを検索中...');
-    const [rawBakeries, rawRunning, rawSento, rawSakura, rawKoyo] = await Promise.all([
-      searchBakeryChecked ? searchBakeries(routeCoords, breadType) : Promise.resolve([]),
-      searchRunningChecked ? searchRunningStations(routeCoords) : Promise.resolve([]),
-      searchSentoChecked ? searchSento(routeCoords) : Promise.resolve([]),
-      searchSakuraChecked ? searchSakura(routeCoords) : Promise.resolve([]),
-      searchKoyoChecked ? searchKoyo(routeCoords) : Promise.resolve([])
-    ]);
+    // Overpass APIへの同時リクエストを避けるため順番に検索
+    showLoading('パン屋を検索中...');
+    const rawBakeries = searchBakeryChecked ? await searchBakeries(routeCoords, breadType) : [];
+    showLoading('ランステを検索中...');
+    const rawRunning = searchRunningChecked ? await searchRunningStations(routeCoords) : [];
+    showLoading('銭湯を検索中...');
+    const rawSento = searchSentoChecked ? await searchSento(routeCoords) : [];
+    showLoading('桜スポットを検索中...');
+    const rawSakura = searchSakuraChecked ? await searchSakura(routeCoords) : [];
+    showLoading('紅葉スポットを検索中...');
+    const rawKoyo = searchKoyoChecked ? await searchKoyo(routeCoords) : [];
 
     // 4. Process and merge results
     function processSpots(rawList, category, defaultName) {
