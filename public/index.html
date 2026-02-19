@@ -95,6 +95,8 @@
   .tag-cat-bakery { background: #fef3e6; color: #e67e22; }
   .tag-cat-running { background: #e8f0fe; color: #2980b9; }
   .tag-cat-sento { background: #fde8e8; color: #c0392b; }
+  .tag-cat-sakura { background: #fce4ec; color: #e91e63; }
+  .tag-cat-koyo { background: #fff8e1; color: #f57f17; }
 
   .map-container { flex: 1; position: relative; }
   #map { width: 100%; height: 100%; }
@@ -214,7 +216,7 @@
 <header>
   <div>
     <h1>ランニング × スポット検索</h1>
-    <div class="subtitle">走るコース沿いのパン屋・ランステ・銭湯を見つけよう</div>
+    <div class="subtitle">走るコース沿いのパン屋・ランステ・銭湯・桜・紅葉を見つけよう</div>
   </div>
 </header>
 
@@ -232,6 +234,12 @@
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-size:0.88rem;cursor:pointer;">
           <input type="checkbox" id="chk-sento" checked> ♨ 銭湯
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:0.88rem;cursor:pointer;">
+          <input type="checkbox" id="chk-sakura"> 🌸 桜の見どころ
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:0.88rem;cursor:pointer;">
+          <input type="checkbox" id="chk-koyo"> 🍂 紅葉の見どころ
         </label>
       </div>
     </div>
@@ -543,6 +551,76 @@ async function searchSento(coords) {
   }).filter(el => el.lat && el.lon);
 }
 
+// --- Search sakura (cherry blossom) spots via Overpass ---
+async function searchSakura(coords) {
+  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+  for (const [lon, lat] of coords) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+  }
+  const buf = 0.005;
+  minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
+  const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
+
+  const types = ['node', 'way', 'relation'];
+  const queries = types.flatMap(t => [
+    `${t}["name"~"桜|さくら|サクラ|花見",i]["leisure"](${bbox})`,
+    `${t}["name"~"桜|さくら|サクラ|花見",i]["tourism"](${bbox})`,
+    `${t}["name"~"桜|さくら|サクラ|花見",i]["natural"](${bbox})`,
+    `${t}["natural"="tree"]["species"~"cherry|桜|sakura|cerasus",i](${bbox})`,
+    `${t}["natural"="tree"]["genus"="Prunus"](${bbox})`,
+    `${t}["name"~"桜並木|桜通り|桜坂|花見",i](${bbox})`
+  ]);
+
+  const query = `[out:json][timeout:25];(${queries.map(q=>q+';').join('')});out body center;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: `data=${encodeURIComponent(query)}`
+  });
+  const data = await safeJson(res, 'Overpass(桜)');
+  return (data.elements || []).map(el => {
+    if (el.type !== 'node' && el.center) { el.lat = el.center.lat; el.lon = el.center.lon; }
+    return el;
+  }).filter(el => el.lat && el.lon);
+}
+
+// --- Search koyo (autumn foliage) spots via Overpass ---
+async function searchKoyo(coords) {
+  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+  for (const [lon, lat] of coords) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+  }
+  const buf = 0.005;
+  minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
+  const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
+
+  const types = ['node', 'way', 'relation'];
+  const queries = types.flatMap(t => [
+    `${t}["name"~"紅葉|もみじ|モミジ|イチョウ|銀杏|いちょう",i]["leisure"](${bbox})`,
+    `${t}["name"~"紅葉|もみじ|モミジ|イチョウ|銀杏|いちょう",i]["tourism"](${bbox})`,
+    `${t}["name"~"紅葉|もみじ|モミジ|イチョウ|銀杏|いちょう",i]["natural"](${bbox})`,
+    `${t}["natural"="tree"]["species"~"maple|イチョウ|銀杏|ginkgo|momiji|もみじ",i](${bbox})`,
+    `${t}["natural"="tree"]["genus"~"Acer|Ginkgo",i](${bbox})`,
+    `${t}["name"~"紅葉坂|いちょう並木|銀杏並木",i](${bbox})`
+  ]);
+
+  const query = `[out:json][timeout:25];(${queries.map(q=>q+';').join('')});out body center;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: `data=${encodeURIComponent(query)}`
+  });
+  const data = await safeJson(res, 'Overpass(紅葉)');
+  return (data.elements || []).map(el => {
+    if (el.type !== 'node' && el.center) { el.lat = el.center.lat; el.lon = el.center.lon; }
+    return el;
+  }).filter(el => el.lat && el.lon);
+}
+
 // --- Distance from point to route ---
 function distToSegment(px, py, ax, ay, bx, by) {
   const dx = bx - ax, dy = by - ay;
@@ -652,6 +730,8 @@ const bakeryIconOpen = makeSpotIcon('🍞', '#e67e22');
 const bakeryIconUnknown = makeSpotIcon('🍞', '#999');
 const runningStationIcon = makeSpotIcon('🏃', '#2980b9');
 const sentoIcon = makeSpotIcon('♨', '#c0392b');
+const sakuraIcon = makeSpotIcon('🌸', '#e91e63');
+const koyoIcon = makeSpotIcon('🍂', '#f57f17');
 
 const startIcon = L.divIcon({
   html: '<div style="background:#27ae60;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">S</div>',
@@ -681,7 +761,7 @@ function showDetail(b) {
     const gq = encodeURIComponent(b.name + ' 営業時間');
     hoursEl.innerHTML = `<a href="https://www.google.com/search?q=${gq}" target="_blank" rel="noopener" style="color:#e67e22;">Googleで確認 &rarr;</a>`;
   }
-  const catLabels = { bakery: 'ベーカリー', pastry: 'ペストリー', confectionery: '菓子店', running_station: 'ランニングステーション', sento: '銭湯' };
+  const catLabels = { bakery: 'ベーカリー', pastry: 'ペストリー', confectionery: '菓子店', running_station: 'ランニングステーション', sento: '銭湯', sakura: '桜の見どころ', koyo: '紅葉の見どころ' };
   document.getElementById('detail-type').textContent = catLabels[b.category] || catLabels[b.shopType] || b.shopType;
   document.getElementById('detail-distance').textContent = `約 ${b.dist}m`;
   document.getElementById('detail-gmaps').href = `https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lon}`;
@@ -879,8 +959,10 @@ async function doSearch() {
     const searchBakeryChecked = document.getElementById('chk-bakery').checked;
     const searchRunningChecked = document.getElementById('chk-running').checked;
     const searchSentoChecked = document.getElementById('chk-sento').checked;
+    const searchSakuraChecked = document.getElementById('chk-sakura').checked;
+    const searchKoyoChecked = document.getElementById('chk-koyo').checked;
 
-    if (!searchBakeryChecked && !searchRunningChecked && !searchSentoChecked) {
+    if (!searchBakeryChecked && !searchRunningChecked && !searchSentoChecked && !searchSakuraChecked && !searchKoyoChecked) {
       alert('検索するスポットを1つ以上選択してください');
       hideLoading();
       btn.disabled = false;
@@ -888,10 +970,12 @@ async function doSearch() {
     }
 
     showLoading('スポットを検索中...');
-    const [rawBakeries, rawRunning, rawSento] = await Promise.all([
+    const [rawBakeries, rawRunning, rawSento, rawSakura, rawKoyo] = await Promise.all([
       searchBakeryChecked ? searchBakeries(routeCoords, breadType) : Promise.resolve([]),
       searchRunningChecked ? searchRunningStations(routeCoords) : Promise.resolve([]),
-      searchSentoChecked ? searchSento(routeCoords) : Promise.resolve([])
+      searchSentoChecked ? searchSento(routeCoords) : Promise.resolve([]),
+      searchSakuraChecked ? searchSakura(routeCoords) : Promise.resolve([]),
+      searchKoyoChecked ? searchKoyo(routeCoords) : Promise.resolve([])
     ]);
 
     // 4. Process and merge results
@@ -924,7 +1008,9 @@ async function doSearch() {
     let allSpots = [
       ...processSpots(rawBakeries, 'bakery', '名称不明のパン屋'),
       ...processSpots(rawRunning, 'running_station', 'ランニングステーション'),
-      ...processSpots(rawSento, 'sento', '銭湯')
+      ...processSpots(rawSento, 'sento', '銭湯'),
+      ...processSpots(rawSakura, 'sakura', '桜スポット'),
+      ...processSpots(rawKoyo, 'koyo', '紅葉スポット')
     ];
 
     // Deduplicate by id
@@ -942,7 +1028,7 @@ async function doSearch() {
     });
 
     // 5. Sort: category order (bakery, running, sento), then open first, then by distance
-    const catOrder = { bakery: 0, running_station: 1, sento: 2 };
+    const catOrder = { bakery: 0, running_station: 1, sento: 2, sakura: 3, koyo: 4 };
     allSpots.sort((a, b) => {
       if (catOrder[a.category] !== catOrder[b.category]) return catOrder[a.category] - catOrder[b.category];
       if (a.isOpen === true && b.isOpen !== true) return -1;
@@ -967,7 +1053,9 @@ async function doSearch() {
     const iconMap = {
       bakery: (b) => b.hours ? bakeryIconOpen : bakeryIconUnknown,
       running_station: () => runningStationIcon,
-      sento: () => sentoIcon
+      sento: () => sentoIcon,
+      sakura: () => sakuraIcon,
+      koyo: () => koyoIcon
     };
     allSpots.forEach(b => {
       const icon = (iconMap[b.category] || iconMap.bakery)(b);
@@ -983,11 +1071,16 @@ async function doSearch() {
     const bakeryCount = allSpots.filter(s => s.category === 'bakery').length;
     const runningCount = allSpots.filter(s => s.category === 'running_station').length;
     const sentoCount = allSpots.filter(s => s.category === 'sento').length;
-    header.textContent = `${allSpots.length} 件（パン屋 ${bakeryCount} / ランステ ${runningCount} / 銭湯 ${sentoCount}）`;
+    const sakuraCount = allSpots.filter(s => s.category === 'sakura').length;
+    const koyoCount = allSpots.filter(s => s.category === 'koyo').length;
+    const parts = [`パン屋 ${bakeryCount}`, `ランステ ${runningCount}`, `銭湯 ${sentoCount}`];
+    if (sakuraCount) parts.push(`桜 ${sakuraCount}`);
+    if (koyoCount) parts.push(`紅葉 ${koyoCount}`);
+    header.textContent = `${allSpots.length} 件（${parts.join(' / ')}）`;
 
-    const catEmoji = { bakery: '🍞', running_station: '🏃', sento: '♨' };
-    const catLabel = { bakery: 'パン屋', running_station: 'ランステ', sento: '銭湯' };
-    const catCss = { bakery: 'tag-cat-bakery', running_station: 'tag-cat-running', sento: 'tag-cat-sento' };
+    const catEmoji = { bakery: '🍞', running_station: '🏃', sento: '♨', sakura: '🌸', koyo: '🍂' };
+    const catLabel = { bakery: 'パン屋', running_station: 'ランステ', sento: '銭湯', sakura: '桜の見どころ', koyo: '紅葉の見どころ' };
+    const catCss = { bakery: 'tag-cat-bakery', running_station: 'tag-cat-running', sento: 'tag-cat-sento', sakura: 'tag-cat-sakura', koyo: 'tag-cat-koyo' };
 
     const list = document.getElementById('results-list');
     if (allSpots.length === 0) {
