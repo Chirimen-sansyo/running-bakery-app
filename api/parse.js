@@ -1,10 +1,24 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const { Redis } = require('@upstash/redis');
+const crypto = require('crypto');
 
 const client = new Anthropic.default({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const MODEL = 'claude-sonnet-4-5-20250929';
+const PARSE_TTL = 60 * 60; // 1時間（秒単位）
+
+// Upstash Redis クライアント（環境変数が未設定の場合はnull）
+function getRedis() {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return null;
+  }
+  return new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+}
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -13,6 +27,22 @@ module.exports = async function handler(req, res) {
 
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'text is required' });
+
+  const cacheKey = 'parse:' + crypto.createHash('sha256').update(text).digest('hex');
+  const redis = getRedis();
+
+  // キャッシュチェック
+  if (redis) {
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        console.log('[parse] cache hit');
+        return res.json(cached);
+      }
+    } catch (e) {
+      console.warn('[parse] cache read error:', e.message);
+    }
+  }
 
   try {
     const message = await client.messages.create({
@@ -44,6 +74,16 @@ JSONのみを返し、説明は不要です。
       return res.status(500).json({ error: 'AI応答からJSONを抽出できませんでした' });
     }
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // キャッシュに保存
+    if (redis) {
+      try {
+        await redis.set(cacheKey, parsed, { ex: PARSE_TTL });
+      } catch (e) {
+        console.warn('[parse] cache write error:', e.message);
+      }
+    }
+
     res.json(parsed);
   } catch (err) {
     console.error('Parse API error:', err.message);

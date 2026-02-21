@@ -1,12 +1,43 @@
 require('dotenv').config();
 const express = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static('public'));
+
+// ② レート制限: /api/ 全体に対して1分間に最大20リクエストまで
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'リクエストが多すぎます。しばらくしてからお試しください。' },
+});
+app.use('/api/', apiLimiter);
+
+// ③ インメモリキャッシュ
+const parseCache = new Map();
+const recommendCache = new Map();
+const PARSE_TTL = 60 * 60 * 1000;      // 1時間
+const RECOMMEND_TTL = 30 * 60 * 1000;  // 30分
+
+function getCached(cache, key, ttl) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > ttl) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(cache, key, data) {
+  cache.set(key, { data, timestamp: Date.now() });
+}
 
 const client = new Anthropic.default({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -18,6 +49,13 @@ const MODEL = 'claude-sonnet-4-5-20250929';
 app.post('/api/parse', async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'text is required' });
+
+  // キャッシュヒット時はClaudeを呼ばずに返す
+  const cached = getCached(parseCache, text, PARSE_TTL);
+  if (cached) {
+    console.log('[parse] cache hit');
+    return res.json(cached);
+  }
 
   try {
     const message = await client.messages.create({
@@ -44,12 +82,12 @@ JSONのみを返し、説明は不要です。
     });
 
     const content = message.content[0].text;
-    // JSONを抽出
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return res.status(500).json({ error: 'AI応答からJSONを抽出できませんでした' });
     }
     const parsed = JSON.parse(jsonMatch[0]);
+    setCache(parseCache, text, parsed);
     res.json(parsed);
   } catch (err) {
     console.error('Parse API error:', err.message);
@@ -62,6 +100,14 @@ app.post('/api/recommend', async (req, res) => {
   const { bakeries, origin, destination, breadType, dayOfWeek } = req.body;
   if (!bakeries || !bakeries.length) {
     return res.status(400).json({ error: 'bakeries list is required' });
+  }
+
+  // キャッシュキー: リクエスト内容全体をJSON文字列化
+  const cacheKey = JSON.stringify({ bakeries, origin, destination, breadType, dayOfWeek });
+  const cached = getCached(recommendCache, cacheKey, RECOMMEND_TTL);
+  if (cached) {
+    console.log('[recommend] cache hit');
+    return res.json(cached);
   }
 
   const bakeryList = bakeries.map((b, i) =>
@@ -112,6 +158,7 @@ ${bakeryList}
       return res.status(500).json({ error: 'AI応答からJSONを抽出できませんでした' });
     }
     const parsed = JSON.parse(jsonMatch[0]);
+    setCache(recommendCache, cacheKey, parsed);
     res.json(parsed);
   } catch (err) {
     console.error('Recommend API error:', err.message);

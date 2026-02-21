@@ -1,10 +1,24 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const { Redis } = require('@upstash/redis');
+const crypto = require('crypto');
 
 const client = new Anthropic.default({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const MODEL = 'claude-sonnet-4-5-20250929';
+const RECOMMEND_TTL = 30 * 60; // 30分（秒単位）
+
+// Upstash Redis クライアント（環境変数が未設定の場合はnull）
+function getRedis() {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return null;
+  }
+  return new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+}
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,6 +28,23 @@ module.exports = async function handler(req, res) {
   const { bakeries, origin, destination, breadType, dayOfWeek } = req.body;
   if (!bakeries || !bakeries.length) {
     return res.status(400).json({ error: 'bakeries list is required' });
+  }
+
+  const cacheRaw = JSON.stringify({ bakeries, origin, destination, breadType, dayOfWeek });
+  const cacheKey = 'recommend:' + crypto.createHash('sha256').update(cacheRaw).digest('hex');
+  const redis = getRedis();
+
+  // キャッシュチェック
+  if (redis) {
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        console.log('[recommend] cache hit');
+        return res.json(cached);
+      }
+    } catch (e) {
+      console.warn('[recommend] cache read error:', e.message);
+    }
   }
 
   const bakeryList = bakeries.map((b, i) =>
@@ -64,6 +95,16 @@ ${bakeryList}
       return res.status(500).json({ error: 'AI応答からJSONを抽出できませんでした' });
     }
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // キャッシュに保存
+    if (redis) {
+      try {
+        await redis.set(cacheKey, parsed, { ex: RECOMMEND_TTL });
+      } catch (e) {
+        console.warn('[recommend] cache write error:', e.message);
+      }
+    }
+
     res.json(parsed);
   } catch (err) {
     console.error('Recommend API error:', err.message);
