@@ -3,6 +3,7 @@
   "outputDirectory": "public",
   "rewrites": [
     { "source": "/api/parse", "destination": "/api/parse" },
-    { "source": "/api/recommend", "destination": "/api/recommend" }
+    { "source": "/api/recommend", "destination": "/api/recommend" },
+    { "source": "/api/user-spots", "destination": "/api/user-spots" }
   ]
 }

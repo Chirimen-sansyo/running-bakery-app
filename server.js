@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
 const rateLimit = require('express-rate-limit');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -163,6 +165,34 @@ ${bakeryList}
   } catch (err) {
     console.error('Recommend API error:', err.message);
     res.status(500).json({ error: 'AIおすすめ生成に失敗しました: ' + err.message });
+  }
+});
+
+// ユーザー登録スポット ファイルパス
+const USER_SPOTS_FILE = path.join(__dirname, 'public', 'user-spots.json');
+
+// GET /api/user-spots — ユーザー登録スポット一覧を返す
+app.get('/api/user-spots', (req, res) => {
+  try {
+    if (!fs.existsSync(USER_SPOTS_FILE)) return res.json([]);
+    const data = JSON.parse(fs.readFileSync(USER_SPOTS_FILE, 'utf8'));
+    res.json(Array.isArray(data) ? data : []);
+  } catch (e) {
+    console.error('user-spots read error:', e.message);
+    res.json([]);
+  }
+});
+
+// POST /api/user-spots — ユーザー登録スポットを保存する
+app.post('/api/user-spots', (req, res) => {
+  try {
+    const spots = req.body;
+    if (!Array.isArray(spots)) return res.status(400).json({ error: 'Array expected' });
+    fs.writeFileSync(USER_SPOTS_FILE, JSON.stringify(spots, null, 2), 'utf8');
+    res.json({ success: true });
+  } catch (e) {
+    console.error('user-spots write error:', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 

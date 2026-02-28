@@ -1,0 +1,26 @@
+[
+  {
+    "category": "ランステ",
+    "name": "三宿ランステ（例）",
+    "address": "東京都世田谷区三宿３－３－５",
+    "hours": "Mo-Fr 07:00-22:00; Sa,Su 09:00-18:00",
+    "phone": "",
+    "website": ""
+  },
+  {
+    "category": "銭湯",
+    "name": "例：近所の銭湯",
+    "address": "東京都渋谷区代々木１丁目",
+    "hours": "Tu-Su 15:00-23:00",
+    "phone": "",
+    "website": ""
+  },
+  {
+    "category": "直売所",
+    "name": "テストテスト",
+    "address": "東京都世田谷区弦巻4－5－6",
+    "hours": "",
+    "phone": "",
+    "website": ""
+  }
+]

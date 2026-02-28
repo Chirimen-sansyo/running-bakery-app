@@ -8,14 +8,15 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --primary: #e67e22;
-    --primary-dark: #d35400;
-    --bg: #fdf6ec;
+    /* テーマカラー（ここを変えると全体の色が変わります） */
+    --primary: #0d9488;
+    --primary-dark: #0f766e;
+    --bg: #f0fdfa;
     --panel-bg: #ffffff;
-    --text: #2c3e50;
-    --text-light: #7f8c8d;
-    --border: #e0d5c7;
-    --accent: #27ae60;
+    --text: #134e4a;
+    --text-light: #64748b;
+    --border: #ccfbf1;
+    --accent: #10b981;
     --danger: #e74c3c;
     --radius: 10px;
     --shadow: 0 2px 12px rgba(0,0,0,0.08);
@@ -57,7 +58,7 @@
     font-size: 0.85rem; font-weight: 500; transition: all 0.2s;
   }
   .radio-group input:checked + span { color: var(--primary-dark); }
-  .radio-group label:has(input:checked) { border-color: var(--primary); background: #fef3e6; }
+  .radio-group label:has(input:checked) { border-color: var(--primary); background: #ccfbf1; }
   .radio-group input { display: none; }
 
   .time-row { display: flex; gap: 8px; }
@@ -81,8 +82,8 @@
     padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer;
     transition: background 0.15s;
   }
-  .bakery-item:hover { background: #fef9f2; }
-  .bakery-item.active { background: #fef3e6; border-left: 3px solid var(--primary); }
+  .bakery-item:hover { background: #f0fdfa; }
+  .bakery-item.active { background: #ccfbf1; border-left: 3px solid var(--primary); }
   .bakery-item .name { font-weight: 600; font-size: 0.9rem; }
   .bakery-item .addr { font-size: 0.72rem; color: var(--text); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bakery-item .meta { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; display: flex; gap: 12px; }
@@ -92,11 +93,58 @@
   .tag-open { background: #e8f8f0; color: var(--accent); }
   .tag-closed { background: #fde8e8; color: var(--danger); }
   .tag-unknown { background: #eee; color: #999; }
-  .tag-cat-bakery { background: #fef3e6; color: #e67e22; }
+  .tag-cat-bakery { background: #ccfbf1; color: var(--primary-dark); }
   .tag-cat-running { background: #e8f0fe; color: #2980b9; }
   .tag-cat-sento { background: #fde8e8; color: #c0392b; }
-  .tag-cat-sakura { background: #fce4ec; color: #e91e63; }
-  .tag-cat-koyo { background: #fff8e1; color: #f57f17; }
+  .tag-cat-meisho { background: #fce4ec; color: #be185d; }
+  .tag-cat-chokubaijo { background: #dcfce7; color: #166534; }
+  .tag-cat-user { background: #fef3c7; color: #92400e; }
+  .tag-user-reg { background: #fef3c7; color: #92400e; }
+
+  /* 登録スポットセクション */
+  .user-spots-section {
+    border-bottom: 1px solid var(--border);
+    background: #fffbeb;
+  }
+  .user-spots-header {
+    padding: 10px 16px; font-size: 0.82rem; color: #92400e; font-weight: 700;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+  }
+  .user-spots-header:hover { background: #fef9e7; }
+  .user-spots-body { padding: 0 12px 10px; }
+  .user-spot-item {
+    background: #fff; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px;
+    border: 1px solid #fde68a; font-size: 0.82rem;
+  }
+  .user-spot-item .us-name { font-weight: 600; color: var(--text); }
+  .user-spot-item .us-addr { color: var(--text-light); font-size: 0.75rem; margin-top: 2px; }
+  .user-spot-item .us-hours { color: var(--text-light); font-size: 0.72rem; margin-top: 2px; }
+  .user-spot-item .us-cat {
+    display: inline-block; padding: 1px 6px; border-radius: 3px;
+    background: #fef3c7; color: #92400e; font-size: 0.68rem; font-weight: 600; margin-bottom: 2px;
+  }
+  .user-spot-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .btn-us-add, .btn-us-save, .btn-us-cancel {
+    flex: 1; padding: 7px; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-us-add { background: #f59e0b; color: #fff; }
+  .btn-us-add:hover { background: #d97706; }
+  .btn-us-save { background: var(--primary); color: #fff; }
+  .btn-us-save:hover { background: var(--primary-dark); }
+  .btn-us-cancel { background: #eee; color: #555; }
+  .btn-us-cancel:hover { background: #ddd; }
+  .us-form { padding: 8px; background: #fffde7; border-radius: 6px; margin-top: 6px; border: 1px solid #fde68a; }
+  .us-form .field { margin-bottom: 7px; }
+  .us-form .field label { display: block; font-size: 0.73rem; font-weight: 600; margin-bottom: 3px; color: var(--text-light); }
+  .us-form .field input, .us-form .field select {
+    width: 100%; padding: 6px 8px; border: 1px solid #fde68a; border-radius: 5px; font-size: 0.83rem;
+  }
+  .us-form .field input:focus, .us-form .field select:focus { outline: none; border-color: #f59e0b; }
+  .btn-us-delete {
+    background: none; border: none; color: #e74c3c; font-size: 0.75rem; cursor: pointer; float: right; padding: 2px 4px;
+  }
+  .btn-us-delete:hover { text-decoration: underline; }
 
   .map-container { flex: 1; position: relative; }
   #map { width: 100%; height: 100%; }
@@ -139,7 +187,7 @@
   /* --- AI入力セクション --- */
   .ai-section {
     padding: 16px; border-bottom: 1px solid var(--border);
-    background: linear-gradient(135deg, #fef9f2, #fff5e6);
+    background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
   }
   .ai-section h2 {
     font-size: 0.85rem; color: var(--primary-dark); margin-bottom: 8px;
@@ -171,7 +219,7 @@
   /* --- AIおすすめセクション --- */
   .ai-recommend-section {
     display: none; padding: 12px 16px; border-bottom: 1px solid var(--border);
-    background: linear-gradient(135deg, #f0e6ff, #fef9f2);
+    background: linear-gradient(135deg, #e0f2fe, #f0fdfa);
   }
   .ai-recommend-section.show { display: block; }
   .ai-recommend-section h3 {
@@ -236,10 +284,10 @@
           <input type="checkbox" id="chk-sento" checked> ♨ 銭湯
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-size:0.88rem;cursor:pointer;">
-          <input type="checkbox" id="chk-sakura"> 🌸 桜の見どころ
+          <input type="checkbox" id="chk-meisho"> 🌸 花見・紅葉
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-size:0.88rem;cursor:pointer;">
-          <input type="checkbox" id="chk-koyo"> 🍂 紅葉の見どころ
+          <input type="checkbox" id="chk-chokubaijo"> 🥬 直売所
         </label>
       </div>
     </div>
@@ -302,6 +350,40 @@
 
       <button class="btn-search" id="btn-search" onclick="doSearch()">スポットを検索</button>
     </div>
+
+    <!-- 登録スポット管理セクション（フォームのすぐ下） -->
+    <div class="user-spots-section" id="user-spots-section">
+      <div class="user-spots-header" onclick="toggleUserSpotsPanel()">
+        <span>⭐ 登録スポット管理 <span id="user-spots-count" style="font-weight:400;font-size:0.75rem;"></span></span>
+        <span id="user-spots-chevron" style="font-size:0.75rem;">▶ 展開</span>
+      </div>
+      <div id="user-spots-body" class="user-spots-body" style="display:none">
+          <div id="user-spots-list"></div>
+          <div class="user-spot-actions">
+            <button class="btn-us-add" onclick="showAddUserSpotForm()">＋ スポットを追加</button>
+          </div>
+          <div id="us-add-form" class="us-form" style="display:none">
+            <div class="field"><label>カテゴリ</label>
+              <select id="us-cat">
+                <option value="直売所">🥬 直売所</option>
+                <option value="ランステ">🏃 ランステ</option>
+                <option value="銭湯">♨ 銭湯</option>
+                <option value="パン屋">🍞 パン屋</option>
+                <option value="花見・紅葉">🌸 花見・紅葉</option>
+              </select>
+            </div>
+            <div class="field"><label>名前（省略可）</label><input type="text" id="us-name" placeholder="例：三宿のランステ"></div>
+            <div class="field"><label>住所 <span style="color:#e74c3c;">*</span></label><input type="text" id="us-addr" placeholder="例：東京都世田谷区三宿３－３－５"></div>
+            <div class="field"><label>営業時間（省略可）</label><input type="text" id="us-hours" placeholder="例：Mo-Fr 07:00-22:00"></div>
+            <div class="field"><label>電話番号（省略可）</label><input type="text" id="us-phone" placeholder="03-xxxx-xxxx"></div>
+            <div class="field"><label>ウェブサイト（省略可）</label><input type="text" id="us-web" placeholder="https://..."></div>
+            <div class="user-spot-actions">
+              <button class="btn-us-save" onclick="saveUserSpot()">保存</button>
+              <button class="btn-us-cancel" onclick="cancelAddUserSpot()">キャンセル</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
     <div class="results-section">
       <!-- AIおすすめセクション（検索後に表示） -->
@@ -408,12 +490,50 @@ async function safeJson(res, apiName) {
   }
 }
 
+// 全角数字・ハイフン・スペースを半角に正規化
+function normalizeAddr(addr) {
+  return addr
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[－ｰ]/g, '-')
+    .replace(/　/g, ' ')
+    .trim();
+}
+
 async function geocode(query) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=ja`;
+  const q = normalizeAddr(query);
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&accept-language=ja&countrycodes=jp`;
   const res = await fetch(url, { headers: { 'User-Agent': 'RunningBakeryApp/1.0' } });
   const data = await safeJson(res, 'Nominatim');
   if (!data.length) throw new Error(`「${query}」の場所が見つかりませんでした`);
   return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name };
+}
+
+// フォールバック付きジオコード（番地を段階的に省略して再試行）
+async function geocodeWithFallback(address) {
+  const normalized = normalizeAddr(address);
+
+  // 1. 正規化アドレスでそのまま試す
+  try { return await geocode(normalized); } catch(e) {}
+
+  // 2. 末尾の「-数字」を1つ削除（例: 4-5-6 → 4-5）
+  const drop1 = normalized.replace(/-\d+$/, '');
+  if (drop1 !== normalized) {
+    try { return await geocode(drop1); } catch(e) {}
+  }
+
+  // 3. さらに1段削除（例: 4-5 → 4）
+  const drop2 = drop1.replace(/-\d+$/, '');
+  if (drop2 !== drop1) {
+    try { return await geocode(drop2); } catch(e) {}
+  }
+
+  // 4. 数字をすべて除去して町名まで（例: 弦巻4 → 弦巻）
+  const townOnly = normalized.replace(/\s*\d[\d-]*$/, '').trim();
+  if (townOnly && townOnly !== normalized) {
+    try { return await geocode(townOnly); } catch(e) {}
+  }
+
+  throw new Error(`「${address}」の場所が見つかりませんでした`);
 }
 
 // --- Reverse geocode (座標→住所) ---
@@ -432,6 +552,18 @@ async function reverseGeocode(lat, lon) {
 // --- sleep util ---
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// --- Bounding box helper ---
+function calcBbox(coords, buf) {
+  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+  for (const [lon, lat] of coords) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+  }
+  return `${minLat - buf},${minLon - buf},${maxLat + buf},${maxLon + buf}`;
+}
+
 // --- Route (OSRM foot) ---
 async function getRoute(from, to) {
   const url = `https://router.project-osrm.org/route/v1/foot/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson`;
@@ -441,207 +573,298 @@ async function getRoute(from, to) {
   return data.routes[0].geometry.coordinates;
 }
 
-// --- Overpass bakery search ---
-async function searchBakeries(coords, breadType) {
-  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
-  for (const [lon, lat] of coords) {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lon < minLon) minLon = lon;
-    if (lon > maxLon) maxLon = lon;
-  }
-  const buf = 0.005;
-  minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
-  const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
+// --- 全スポット統合Overpass検索（1クエリで全カテゴリ取得、高速化） ---
+async function searchAllSpotsOSM(coords, breadType, categories) {
+  const bboxS = calcBbox(coords, 0.005); // パン屋・ランステ・銭湯
+  const bboxL = calcBbox(coords, 0.008); // 桜・紅葉（広域）
+  const T = ['node', 'way', 'relation'];
+  const Q = [];
 
-  const types = ['node', 'way', 'relation'];
-  let shopQueries;
-  if (breadType === 'soft') {
-    shopQueries = types.flatMap(t => [
-      `${t}["shop"="bakery"](${bbox})`,
-      `${t}["shop"="pastry"](${bbox})`,
-      `${t}["shop"="confectionery"](${bbox})`,
-      `${t}["craft"="bakery"](${bbox})`
-    ]);
-  } else {
-    shopQueries = types.flatMap(t => [
-      `${t}["shop"="bakery"](${bbox})`,
-      `${t}["craft"="bakery"](${bbox})`
-    ]);
+  if (categories.bakery) {
+    if (breadType === 'soft') {
+      Q.push(...T.flatMap(t => [
+        `${t}["shop"="bakery"](${bboxS})`,
+        `${t}["shop"="pastry"](${bboxS})`,
+        `${t}["shop"="confectionery"](${bboxS})`,
+        `${t}["craft"="bakery"](${bboxS})`
+      ]));
+    } else {
+      Q.push(...T.flatMap(t => [
+        `${t}["shop"="bakery"](${bboxS})`,
+        `${t}["craft"="bakery"](${bboxS})`
+      ]));
+    }
   }
 
-  const query = `[out:json][timeout:25];(${shopQueries.map(q=>q+';').join('')});out body center;`;
+  if (categories.running) {
+    // sport=running タグ、またはランニングステーション・ランステ名のみ（一般ジム・スポーツ施設は除外）
+    Q.push(...T.flatMap(t => [
+      `${t}["sport"="running"](${bboxS})`,
+      `${t}["name"~"ランニングステーション|ランステ|Running Station",i](${bboxS})`
+    ]));
+  }
+
+  if (categories.sento) {
+    Q.push(...T.flatMap(t => [
+      `${t}["amenity"="public_bath"](${bboxS})`,
+      `${t}["leisure"="bathing_place"](${bboxS})`,
+      `${t}["shop"="bathhouse"](${bboxS})`
+    ]));
+  }
+
+  if (categories.meisho) {
+    // 観光名所（桜＋紅葉を統合。地名・通り名除外のためタグ付きクエリのみ）
+    Q.push(...T.flatMap(t => [
+      // 桜
+      `${t}["leisure"="park"]["name"~"桜|さくら|花見",i](${bboxL})`,
+      `${t}["leisure"="garden"]["name"~"桜|さくら|花見",i](${bboxL})`,
+      `${t}["leisure"="nature_reserve"]["name"~"桜|さくら|花見",i](${bboxL})`,
+      `${t}["amenity"="place_of_worship"]["name"~"桜|さくら",i](${bboxL})`,
+      `${t}["natural"="tree"]["species"~"cherry|桜|sakura|cerasus|Prunus",i](${bboxL})`,
+      `${t}["natural"="tree"]["genus"="Prunus"](${bboxL})`,
+      `${t}["natural"="tree_row"]["species"~"cherry|桜|sakura|Prunus",i](${bboxL})`,
+      `${t}["tourism"~"attraction|viewpoint"]["name"~"桜|さくら|花見",i](${bboxL})`,
+      `${t}["waterway"]["name"~"桜|さくら",i](${bboxL})`,
+      // 紅葉
+      `${t}["leisure"="park"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bboxL})`,
+      `${t}["leisure"="garden"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bboxL})`,
+      `${t}["leisure"="nature_reserve"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bboxL})`,
+      `${t}["amenity"="place_of_worship"]["name"~"紅葉|もみじ|楓",i](${bboxL})`,
+      `${t}["natural"="tree"]["species"~"maple|ginkgo|イチョウ|銀杏|もみじ|モミジ|楓|Acer|Ginkgo",i](${bboxL})`,
+      `${t}["natural"="tree"]["genus"~"Acer|Ginkgo"](${bboxL})`,
+      `${t}["natural"="tree_row"]["species"~"ginkgo|Acer|イチョウ|銀杏",i](${bboxL})`,
+      `${t}["tourism"~"attraction|viewpoint"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bboxL})`,
+      `${t}["waterway"]["name"~"紅葉|もみじ",i](${bboxL})`
+    ]));
+  }
+
+  if (Q.length === 0) return [];
+
+  const query = `[out:json][timeout:60];(${Q.map(q => q + ';').join('')});out body center;`;
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`
   });
   const data = await safeJson(res, 'Overpass');
   return (data.elements || []).map(el => {
-    if (el.type !== 'node' && el.center) {
-      el.lat = el.center.lat;
-      el.lon = el.center.lon;
+    if (el.type !== 'node' && el.center) { el.lat = el.center.lat; el.lon = el.center.lon; }
+    return el;
+  }).filter(el => el.lat && el.lon);
+}
+
+// --- OSMエレメントのカテゴリ判定（構造タグ優先） ---
+function categorizeElement(el) {
+  const tags = el.tags || {};
+  const shop = tags.shop;
+  const craft = tags.craft;
+  const amenity = tags.amenity;
+  const leisure = tags.leisure;
+  const sport = tags.sport;
+  const natural = tags.natural;
+  const name = (tags.name || tags['name:ja'] || tags['name:en'] || '').toLowerCase();
+  const genus = (tags.genus || '').toLowerCase();
+  const species = (tags.species || tags['species:en'] || tags.taxon || '').toLowerCase();
+
+  // 1. パン屋（構造タグ最優先）
+  if (['bakery', 'pastry', 'confectionery'].includes(shop) || craft === 'bakery') return 'bakery';
+
+  // 2. 銭湯
+  if (amenity === 'public_bath' || leisure === 'bathing_place' || shop === 'bathhouse') return 'sento';
+
+  // 3. ランニングステーション（sport=running タグ、またはランニングステーション・ランステ名のみ）
+  if (sport === 'running' || /ランニングステーション|ランステ|Running Station/i.test(name)) return 'running_station';
+
+  // 地名・駅・一般道路は桜/紅葉スポットから除外する判定ヘルパー
+  const isPlaceOrRoad = tags.place || tags.railway ||
+    (tags.highway && !['footway', 'path', 'pedestrian', 'cycleway', 'steps'].includes(tags.highway));
+
+  // 4. 観光名所（桜・紅葉を統合。木タグ優先、次に意味のあるスポットタグ付きの名前のみ）
+  if ((natural === 'tree' || natural === 'tree_row') && /cherry|sakura|cerasus|prunus/i.test(species + genus)) return 'meisho';
+  if (/桜|さくら|サクラ|花見/.test(name) && !isPlaceOrRoad) return 'meisho';
+  if ((natural === 'tree' || natural === 'tree_row') && /maple|ginkgo|acer/i.test(species + genus)) return 'meisho';
+  if (/紅葉|もみじ|モミジ|イチョウ|銀杏|いちょう|楓|カエデ|かえで/.test(name) && !isPlaceOrRoad) return 'meisho';
+
+  return null;
+}
+
+// ===========================================
+// ユーザー登録スポット機能
+// ===========================================
+
+// カテゴリ名の正規化（日本語 → 内部カテゴリ）
+function normalizeUserCategory(cat) {
+  const map = {
+    'ランステ': 'running_station', 'running_station': 'running_station',
+    '銭湯': 'sento', 'sento': 'sento',
+    'パン屋': 'bakery', 'bakery': 'bakery',
+    '花見・紅葉': 'meisho', '観光名所': 'meisho', 'meisho': 'meisho',
+    '桜': 'meisho', 'sakura': 'meisho',
+    '紅葉': 'meisho', 'koyo': 'meisho',
+    '直売所': 'chokubaijo', 'chokubaijo': 'chokubaijo',
+  };
+  return map[cat] || 'running_station';
+}
+
+// localStorage ジオコードキャッシュ（7日間）
+const GEO_CACHE_KEY = 'rbapp-geo-cache';
+const GEO_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+function getGeoCache() { try { return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}'); } catch(e) { return {}; } }
+function setGeoCache(c) { try { localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(c)); } catch(e) {} }
+
+async function geocodeCached(address) {
+  const cache = getGeoCache();
+  const entry = cache[address];
+  if (entry && Date.now() - entry.ts < GEO_CACHE_TTL) return entry.data;
+  const result = await geocode(address);
+  cache[address] = { data: result, ts: Date.now() };
+  setGeoCache(cache);
+  return result;
+}
+
+// サーバーからユーザー登録スポットを取得
+async function fetchUserSpots() {
+  try {
+    const res = await fetch('/api/user-spots');
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch(e) { return []; }
+}
+
+// ユーザースポットをルート上のSpotオブジェクトに変換（ジオコード込み）
+async function processUserSpots(userSpots, coords, arrivalMin, dow) {
+  const result = [];
+  const cache = getGeoCache();
+  const needGeocode = userSpots.filter(s => !s.lat && !s.lon && s.address);
+
+  for (let i = 0; i < userSpots.length; i++) {
+    const spot = userSpots[i];
+    let lat = spot.lat, lon = spot.lon;
+
+    if (!lat || !lon) {
+      if (!spot.address) continue;
+      try {
+        const cacheKey = normalizeAddr(spot.address);
+        const inCache = cache[cacheKey] && Date.now() - cache[cacheKey].ts < GEO_CACHE_TTL;
+        if (!inCache && i > 0) await sleep(1100); // Nominatim レート制限
+        const geo = await geocodeWithFallback(spot.address);
+        lat = geo.lat; lon = geo.lon;
+        // フォールバック後の結果もキャッシュ
+        cache[cacheKey] = { data: geo, ts: Date.now() };
+        setGeoCache(cache);
+      } catch(e) {
+        console.warn('ユーザースポット ジオコード失敗:', spot.address, e.message);
+        continue;
+      }
     }
-    return el;
-  }).filter(el => el.lat && el.lon);
-}
 
-// --- Search running stations via Overpass ---
-async function searchRunningStations(coords) {
-  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
-  for (const [lon, lat] of coords) {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lon < minLon) minLon = lon;
-    if (lon > maxLon) maxLon = lon;
+    const dist = Math.round(distToRoute(lat, lon, coords));
+    if (dist > 500) continue;
+
+    const category = normalizeUserCategory(spot.category);
+    result.push({
+      id: `user-${i}-${Date.now()}`,
+      lat, lon,
+      name: spot.name || spot.address || `登録スポット${i+1}`,
+      address: spot.address || '',
+      hours: spot.hours || '',
+      phone: spot.phone || '',
+      website: spot.website || '',
+      shopType: category,
+      category,
+      dist,
+      isOpen: isOpenAt(spot.hours, arrivalMin, dow),
+      source: 'user'
+    });
   }
-  const buf = 0.005;
-  minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
-  const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
-
-  const types = ['node', 'way', 'relation'];
-  const queries = types.flatMap(t => [
-    `${t}["sport"="running"](${bbox})`,
-    `${t}["leisure"="sports_centre"](${bbox})`,
-    `${t}["leisure"="fitness_centre"](${bbox})`,
-    `${t}["name"~"ランニングステーション|ランステ|ランナー|Running Station|runner",i](${bbox})`,
-    `${t}["name"~"ジョギング|jogging",i]["leisure"](${bbox})`
-  ]);
-
-  const query = `[out:json][timeout:25];(${queries.map(q=>q+';').join('')});out body center;`;
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`
-  });
-  const data = await safeJson(res, 'Overpass(ランステ)');
-  return (data.elements || []).map(el => {
-    if (el.type !== 'node' && el.center) { el.lat = el.center.lat; el.lon = el.center.lon; }
-    return el;
-  }).filter(el => el.lat && el.lon);
+  return result;
 }
 
-// --- Search sento (bathhouses) via Overpass ---
-async function searchSento(coords) {
-  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
-  for (const [lon, lat] of coords) {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lon < minLon) minLon = lon;
-    if (lon > maxLon) maxLon = lon;
+// ===========================================
+// 登録スポット管理UI
+// ===========================================
+let userSpotsData = [];
+
+async function loadUserSpotsUI() {
+  userSpotsData = await fetchUserSpots();
+  renderUserSpotsList();
+  const count = userSpotsData.length;
+  document.getElementById('user-spots-count').textContent = count > 0 ? `(${count}件)` : '';
+}
+
+function renderUserSpotsList() {
+  const list = document.getElementById('user-spots-list');
+  const catLabel = { ランステ: '🏃 ランステ', 銭湯: '♨ 銭湯', パン屋: '🍞 パン屋', '花見・紅葉': '🌸 花見・紅葉', 観光名所: '🌸 花見・紅葉', 直売所: '🥬 直売所' };
+  if (userSpotsData.length === 0) {
+    list.innerHTML = '<div style="font-size:0.78rem;color:#999;padding:6px 0;">まだ登録スポットがありません</div>';
+    return;
   }
-  const buf = 0.005;
-  minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
-  const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
-
-  const types = ['node', 'way', 'relation'];
-  const queries = types.flatMap(t => [
-    `${t}["amenity"="public_bath"](${bbox})`,
-    `${t}["leisure"="bathing_place"](${bbox})`,
-    `${t}["shop"="bathhouse"](${bbox})`
-  ]);
-
-  const query = `[out:json][timeout:25];(${queries.map(q=>q+';').join('')});out body center;`;
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`
-  });
-  const data = await safeJson(res, 'Overpass(銭湯)');
-  return (data.elements || []).map(el => {
-    if (el.type !== 'node' && el.center) { el.lat = el.center.lat; el.lon = el.center.lon; }
-    return el;
-  }).filter(el => el.lat && el.lon);
+  list.innerHTML = userSpotsData.map((s, idx) => `
+    <div class="user-spot-item">
+      <button class="btn-us-delete" onclick="deleteUserSpot(${idx})">✕ 削除</button>
+      <div class="us-cat">${catLabel[s.category] || s.category}</div>
+      <div class="us-name">${escHtml(s.name || s.address)}</div>
+      <div class="us-addr">${escHtml(s.address)}</div>
+      ${s.hours ? `<div class="us-hours">⏰ ${escHtml(s.hours)}</div>` : ''}
+    </div>
+  `).join('');
 }
 
-// --- Search sakura (cherry blossom) spots via Overpass ---
-async function searchSakura(coords) {
-  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
-  for (const [lon, lat] of coords) {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lon < minLon) minLon = lon;
-    if (lon > maxLon) maxLon = lon;
-  }
-  const buf = 0.008;
-  minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
-  const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
-
-  const types = ['node', 'way', 'relation'];
-  const queries = types.flatMap(t => [
-    // 名前に桜・花見が含まれるあらゆるスポット（タグ制限なし）
-    `${t}["name"~"桜|さくら|サクラ|花見|cherry blossom",i](${bbox})`,
-    // 公園・庭園
-    `${t}["leisure"="park"]["name"~"桜|さくら|花見",i](${bbox})`,
-    `${t}["leisure"="garden"]["name"~"桜|さくら|花見",i](${bbox})`,
-    // 神社仏閣（桜の名所が多い）
-    `${t}["amenity"="place_of_worship"]["name"~"桜|さくら",i](${bbox})`,
-    // 桜の木
-    `${t}["natural"="tree"]["species"~"cherry|桜|sakura|cerasus|Prunus",i](${bbox})`,
-    `${t}["natural"="tree"]["genus"="Prunus"](${bbox})`,
-    `${t}["natural"="tree_row"]["species"~"cherry|桜|sakura|Prunus",i](${bbox})`,
-    // 観光・名所
-    `${t}["tourism"~"attraction|viewpoint"]["name"~"桜|さくら|花見",i](${bbox})`,
-    // 桜並木・桜通りなど道路
-    `${t}["highway"]["name"~"桜|さくら|サクラ",i](${bbox})`,
-    // 川沿い（花見スポット）
-    `${t}["waterway"]["name"~"桜|さくら",i](${bbox})`
-  ]);
-
-  const query = `[out:json][timeout:30];(${queries.map(q=>q+';').join('')});out body center;`;
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`
-  });
-  const data = await safeJson(res, 'Overpass(桜)');
-  return (data.elements || []).map(el => {
-    if (el.type !== 'node' && el.center) { el.lat = el.center.lat; el.lon = el.center.lon; }
-    return el;
-  }).filter(el => el.lat && el.lon);
+function toggleUserSpotsPanel() {
+  const body = document.getElementById('user-spots-body');
+  const chev = document.getElementById('user-spots-chevron');
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  chev.textContent = hidden ? '▼ 折りたたむ' : '▶ 展開';
 }
 
-// --- Search koyo (autumn foliage) spots via Overpass ---
-async function searchKoyo(coords) {
-  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
-  for (const [lon, lat] of coords) {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lon < minLon) minLon = lon;
-    if (lon > maxLon) maxLon = lon;
-  }
-  const buf = 0.008;
-  minLat -= buf; maxLat += buf; minLon -= buf; maxLon += buf;
-  const bbox = `${minLat},${minLon},${maxLat},${maxLon}`;
-
-  const types = ['node', 'way', 'relation'];
-  const queries = types.flatMap(t => [
-    // 名前に紅葉・イチョウが含まれるあらゆるスポット（タグ制限なし）
-    `${t}["name"~"紅葉|もみじ|モミジ|イチョウ|銀杏|いちょう|楓|カエデ|かえで",i](${bbox})`,
-    // 公園・庭園
-    `${t}["leisure"="park"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bbox})`,
-    `${t}["leisure"="garden"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bbox})`,
-    // 神社仏閣（紅葉の名所が多い）
-    `${t}["amenity"="place_of_worship"]["name"~"紅葉|もみじ|楓",i](${bbox})`,
-    // 紅葉・イチョウの木
-    `${t}["natural"="tree"]["species"~"maple|ginkgo|イチョウ|銀杏|もみじ|モミジ|楓|Acer|Ginkgo",i](${bbox})`,
-    `${t}["natural"="tree"]["genus"~"Acer|Ginkgo"](${bbox})`,
-    `${t}["natural"="tree_row"]["species"~"ginkgo|Acer|イチョウ|銀杏",i](${bbox})`,
-    // 観光・名所
-    `${t}["tourism"~"attraction|viewpoint"]["name"~"紅葉|もみじ|イチョウ|銀杏|楓",i](${bbox})`,
-    // 並木道
-    `${t}["highway"]["name"~"紅葉|もみじ|イチョウ|銀杏|いちょう",i](${bbox})`,
-    // 川沿い
-    `${t}["waterway"]["name"~"紅葉|もみじ",i](${bbox})`
-  ]);
-
-  const query = `[out:json][timeout:30];(${queries.map(q=>q+';').join('')});out body center;`;
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`
-  });
-  const data = await safeJson(res, 'Overpass(紅葉)');
-  return (data.elements || []).map(el => {
-    if (el.type !== 'node' && el.center) { el.lat = el.center.lat; el.lon = el.center.lon; }
-    return el;
-  }).filter(el => el.lat && el.lon);
+function showAddUserSpotForm() {
+  document.getElementById('us-add-form').style.display = '';
+  document.getElementById('us-addr').focus();
 }
+
+function cancelAddUserSpot() {
+  document.getElementById('us-add-form').style.display = 'none';
+  ['us-name','us-addr','us-hours','us-phone','us-web'].forEach(id => { document.getElementById(id).value = ''; });
+}
+
+async function saveUserSpot() {
+  const addr = document.getElementById('us-addr').value.trim();
+  if (!addr) { alert('住所を入力してください'); return; }
+  const newSpot = {
+    category: document.getElementById('us-cat').value,
+    name: document.getElementById('us-name').value.trim() || addr,
+    address: addr,
+    hours: document.getElementById('us-hours').value.trim(),
+    phone: document.getElementById('us-phone').value.trim(),
+    website: document.getElementById('us-web').value.trim()
+  };
+  userSpotsData.push(newSpot);
+  await saveUserSpotsToServer();
+  cancelAddUserSpot();
+  renderUserSpotsList();
+  document.getElementById('user-spots-count').textContent = `(${userSpotsData.length}件)`;
+}
+
+async function deleteUserSpot(idx) {
+  if (!confirm(`「${userSpotsData[idx].name || userSpotsData[idx].address}」を削除しますか？`)) return;
+  userSpotsData.splice(idx, 1);
+  await saveUserSpotsToServer();
+  renderUserSpotsList();
+  document.getElementById('user-spots-count').textContent = userSpotsData.length > 0 ? `(${userSpotsData.length}件)` : '';
+}
+
+async function saveUserSpotsToServer() {
+  try {
+    await fetch('/api/user-spots', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userSpotsData)
+    });
+  } catch(e) { console.error('登録スポット保存エラー:', e.message); }
+}
+
+// ページ読み込み時にUI初期化
+loadUserSpotsUI();
 
 // --- Distance from point to route ---
 function distToSegment(px, py, ax, ay, bx, by) {
@@ -748,12 +971,12 @@ function makeSpotIcon(emoji, color) {
     className: ''
   });
 }
-const bakeryIconOpen = makeSpotIcon('🍞', '#e67e22');
+const bakeryIconOpen = makeSpotIcon('🍞', '#0d9488');
 const bakeryIconUnknown = makeSpotIcon('🍞', '#999');
 const runningStationIcon = makeSpotIcon('🏃', '#2980b9');
 const sentoIcon = makeSpotIcon('♨', '#c0392b');
-const sakuraIcon = makeSpotIcon('🌸', '#e91e63');
-const koyoIcon = makeSpotIcon('🍂', '#f57f17');
+const meishoIcon = makeSpotIcon('🌸', '#e91e63');
+const chokubaijoIcon = makeSpotIcon('🥬', '#16a34a');
 
 const startIcon = L.divIcon({
   html: '<div style="background:#27ae60;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">S</div>',
@@ -781,9 +1004,9 @@ function showDetail(b) {
     hoursEl.textContent = b.hours;
   } else {
     const gq = encodeURIComponent(b.name + ' 営業時間');
-    hoursEl.innerHTML = `<a href="https://www.google.com/search?q=${gq}" target="_blank" rel="noopener" style="color:#e67e22;">Googleで確認 &rarr;</a>`;
+    hoursEl.innerHTML = `<a href="https://www.google.com/search?q=${gq}" target="_blank" rel="noopener" style="color:var(--primary-dark);">Googleで確認 &rarr;</a>`;
   }
-  const catLabels = { bakery: 'ベーカリー', pastry: 'ペストリー', confectionery: '菓子店', running_station: 'ランニングステーション', sento: '銭湯', sakura: '桜の見どころ', koyo: '紅葉の見どころ' };
+  const catLabels = { bakery: 'ベーカリー', pastry: 'ペストリー', confectionery: '菓子店', running_station: 'ランニングステーション', sento: '銭湯', meisho: '花見・紅葉', chokubaijo: '直売所' };
   document.getElementById('detail-type').textContent = catLabels[b.category] || catLabels[b.shopType] || b.shopType;
   document.getElementById('detail-distance').textContent = `約 ${b.dist}m`;
   document.getElementById('detail-gmaps').href = `https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lon}`;
@@ -981,27 +1204,33 @@ async function doSearch() {
     const searchBakeryChecked = document.getElementById('chk-bakery').checked;
     const searchRunningChecked = document.getElementById('chk-running').checked;
     const searchSentoChecked = document.getElementById('chk-sento').checked;
-    const searchSakuraChecked = document.getElementById('chk-sakura').checked;
-    const searchKoyoChecked = document.getElementById('chk-koyo').checked;
+    const searchMeishoChecked = document.getElementById('chk-meisho').checked;
+    const searchChokubaijoChecked = document.getElementById('chk-chokubaijo').checked;
 
-    if (!searchBakeryChecked && !searchRunningChecked && !searchSentoChecked && !searchSakuraChecked && !searchKoyoChecked) {
+    if (!searchBakeryChecked && !searchRunningChecked && !searchSentoChecked && !searchMeishoChecked && !searchChokubaijoChecked) {
       alert('検索するスポットを1つ以上選択してください');
       hideLoading();
       btn.disabled = false;
       return;
     }
 
-    // Overpass APIへの同時リクエストを避けるため順番に検索
-    showLoading('パン屋を検索中...');
-    const rawBakeries = searchBakeryChecked ? await searchBakeries(routeCoords, breadType) : [];
-    showLoading('ランステを検索中...');
-    const rawRunning = searchRunningChecked ? await searchRunningStations(routeCoords) : [];
-    showLoading('銭湯を検索中...');
-    const rawSento = searchSentoChecked ? await searchSento(routeCoords) : [];
-    showLoading('桜スポットを検索中...');
-    const rawSakura = searchSakuraChecked ? await searchSakura(routeCoords) : [];
-    showLoading('紅葉スポットを検索中...');
-    const rawKoyo = searchKoyoChecked ? await searchKoyo(routeCoords) : [];
+    // 全スポットを1クエリで取得（高速化: 5リクエスト→1リクエスト）
+    showLoading('スポットを検索中...');
+    const categories = {
+      bakery: searchBakeryChecked,
+      running: searchRunningChecked,
+      sento: searchSentoChecked,
+      meisho: searchMeishoChecked,
+      chokubaijo: searchChokubaijoChecked
+    };
+    const [rawElements, userSpotsRaw] = await Promise.all([
+      searchAllSpotsOSM(routeCoords, breadType, categories),
+      fetchUserSpots()
+    ]);
+    const rawBakeries = searchBakeryChecked ? rawElements.filter(el => categorizeElement(el) === 'bakery') : [];
+    const rawRunning = searchRunningChecked ? rawElements.filter(el => categorizeElement(el) === 'running_station') : [];
+    const rawSento = searchSentoChecked ? rawElements.filter(el => categorizeElement(el) === 'sento') : [];
+    const rawMeisho = searchMeishoChecked ? rawElements.filter(el => categorizeElement(el) === 'meisho') : [];
 
     // 4. Process and merge results
     function processSpots(rawList, category, defaultName) {
@@ -1034,9 +1263,13 @@ async function doSearch() {
       ...processSpots(rawBakeries, 'bakery', '名称不明のパン屋'),
       ...processSpots(rawRunning, 'running_station', 'ランニングステーション'),
       ...processSpots(rawSento, 'sento', '銭湯'),
-      ...processSpots(rawSakura, 'sakura', '桜スポット'),
-      ...processSpots(rawKoyo, 'koyo', '紅葉スポット')
+      ...processSpots(rawMeisho, 'meisho', '花見・紅葉スポット')
     ];
+
+    // ユーザー登録スポットを統合（ジオコード＋500m以内フィルタ）
+    showLoading('登録スポットを処理中...');
+    const userProcessed = await processUserSpots(userSpotsRaw, routeCoords, arrivalMin, selectedDow);
+    allSpots = [...allSpots, ...userProcessed];
 
     // Deduplicate by id
     const seen = new Set();
@@ -1053,7 +1286,7 @@ async function doSearch() {
     });
 
     // 5. Sort: category order (bakery, running, sento), then open first, then by distance
-    const catOrder = { bakery: 0, running_station: 1, sento: 2, sakura: 3, koyo: 4 };
+    const catOrder = { bakery: 0, running_station: 1, sento: 2, meisho: 3, chokubaijo: 4 };
     allSpots.sort((a, b) => {
       if (catOrder[a.category] !== catOrder[b.category]) return catOrder[a.category] - catOrder[b.category];
       if (a.isOpen === true && b.isOpen !== true) return -1;
@@ -1061,17 +1294,16 @@ async function doSearch() {
       return a.dist - b.dist;
     });
 
-    // 5.5 Reverse geocode で住所を補完
-    showLoading(`住所情報を取得中... (0/${allSpots.length})`);
-    for (let i = 0; i < allSpots.length; i++) {
-      const b = allSpots[i];
-      showLoading(`住所情報を取得中... (${i+1}/${allSpots.length})`);
-      if (!b.address) {
-        try {
-          b.address = await reverseGeocode(b.lat, b.lon);
-        } catch(e) { /* ignore */ }
+    // 5.5 Reverse geocode で住所を補完（住所未取得スポットのみ、最大10件で高速化）
+    const noAddrSpots = allSpots.filter(b => !b.address && b.source !== 'user').slice(0, 10);
+    if (noAddrSpots.length > 0) {
+      showLoading(`住所情報を取得中... (0/${noAddrSpots.length})`);
+      for (let i = 0; i < noAddrSpots.length; i++) {
+        showLoading(`住所情報を取得中... (${i+1}/${noAddrSpots.length})`);
+        try { noAddrSpots[i].address = await reverseGeocode(noAddrSpots[i].lat, noAddrSpots[i].lon); }
+        catch(e) { /* ignore */ }
+        if (i < noAddrSpots.length - 1) await sleep(1100);
       }
-      if (i < allSpots.length - 1) await sleep(1100);
     }
 
     // 6. Display markers
@@ -1079,8 +1311,8 @@ async function doSearch() {
       bakery: (b) => b.hours ? bakeryIconOpen : bakeryIconUnknown,
       running_station: () => runningStationIcon,
       sento: () => sentoIcon,
-      sakura: () => sakuraIcon,
-      koyo: () => koyoIcon
+      meisho: () => meishoIcon,
+      chokubaijo: () => chokubaijoIcon
     };
     allSpots.forEach(b => {
       const icon = (iconMap[b.category] || iconMap.bakery)(b);
@@ -1096,16 +1328,16 @@ async function doSearch() {
     const bakeryCount = allSpots.filter(s => s.category === 'bakery').length;
     const runningCount = allSpots.filter(s => s.category === 'running_station').length;
     const sentoCount = allSpots.filter(s => s.category === 'sento').length;
-    const sakuraCount = allSpots.filter(s => s.category === 'sakura').length;
-    const koyoCount = allSpots.filter(s => s.category === 'koyo').length;
+    const meishoCount = allSpots.filter(s => s.category === 'meisho').length;
+    const chokubaijoCount = allSpots.filter(s => s.category === 'chokubaijo').length;
     const parts = [`パン屋 ${bakeryCount}`, `ランステ ${runningCount}`, `銭湯 ${sentoCount}`];
-    if (sakuraCount) parts.push(`桜 ${sakuraCount}`);
-    if (koyoCount) parts.push(`紅葉 ${koyoCount}`);
+    if (meishoCount) parts.push(`花見・紅葉 ${meishoCount}`);
+    if (chokubaijoCount) parts.push(`直売所 ${chokubaijoCount}`);
     header.textContent = `${allSpots.length} 件（${parts.join(' / ')}）`;
 
-    const catEmoji = { bakery: '🍞', running_station: '🏃', sento: '♨', sakura: '🌸', koyo: '🍂' };
-    const catLabel = { bakery: 'パン屋', running_station: 'ランステ', sento: '銭湯', sakura: '桜の見どころ', koyo: '紅葉の見どころ' };
-    const catCss = { bakery: 'tag-cat-bakery', running_station: 'tag-cat-running', sento: 'tag-cat-sento', sakura: 'tag-cat-sakura', koyo: 'tag-cat-koyo' };
+    const catEmoji = { bakery: '🍞', running_station: '🏃', sento: '♨', meisho: '🌸', chokubaijo: '🥬' };
+    const catLabel = { bakery: 'パン屋', running_station: 'ランステ', sento: '銭湯', meisho: '花見・紅葉', chokubaijo: '直売所' };
+    const catCss = { bakery: 'tag-cat-bakery', running_station: 'tag-cat-running', sento: 'tag-cat-sento', meisho: 'tag-cat-meisho', chokubaijo: 'tag-cat-chokubaijo' };
 
     const list = document.getElementById('results-list');
     if (allSpots.length === 0) {
@@ -1116,11 +1348,12 @@ async function doSearch() {
           : b.isOpen === false ? '<span class="tag tag-closed">営業時間外</span>'
           : '<span class="tag tag-unknown">時間不明</span>';
         const catTag = `<span class="tag ${catCss[b.category]}">${catEmoji[b.category]} ${catLabel[b.category]}</span>`;
+        const userTag = b.source === 'user' ? '<span class="tag tag-user-reg">⭐ 登録</span>' : '';
         const addrLine = b.address ? `<div class="addr">${escHtml(b.address)}</div>` : '';
-        const hoursText = b.hours ? escHtml(b.hours) : `<a href="https://www.google.com/search?q=${encodeURIComponent(b.name + ' 営業時間')}" target="_blank" rel="noopener" style="color:#e67e22;text-decoration:none;" onclick="event.stopPropagation()">営業時間をGoogleで確認</a>`;
+        const hoursText = b.hours ? escHtml(b.hours) : `<a href="https://www.google.com/search?q=${encodeURIComponent(b.name + ' 営業時間')}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:none;" onclick="event.stopPropagation()">営業時間をGoogleで確認</a>`;
         const tabelogLine = b.category === 'bakery' ? `<div class="meta"><a href="https://tabelog.com/rstLst/?vs=1&sa=&sk=${encodeURIComponent(b.name)}&hfc=1&sw=${encodeURIComponent(b.name)}" target="_blank" rel="noopener" style="color:#e63e1a;text-decoration:none;font-weight:600;" onclick="event.stopPropagation()">食べログで検索</a></div>` : '';
         return `<div class="bakery-item" data-id="${b.id}" onclick='showDetail(${JSON.stringify(b).replace(/'/g, "&#39;")})'>
-          <div class="name">${catTag} ${escHtml(b.name)} ${openTag}</div>
+          <div class="name">${catTag}${userTag} ${escHtml(b.name)} ${openTag}</div>
           ${addrLine}
           <div class="meta"><span>経路から ${b.dist}m</span><span>${hoursText}</span></div>
           ${tabelogLine}
