@@ -490,12 +490,15 @@ async function safeJson(res, apiName) {
   }
 }
 
-// 全角数字・ハイフン・スペースを半角に正規化
+// 全角数字・ハイフン・スペースを半角に正規化、不要プレフィックスを除去
 function normalizeAddr(addr) {
   return addr
+    .replace(/最寄りの住所[：:]\s*/g, '')
+    .replace(/〒\s*[0-9０-９]{3}[-－][0-9０-９]{4}\s*/g, '')
     .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
-    .replace(/[－ｰ]/g, '-')
+    .replace(/[－ｰ\u2212\u2013\u2014]/g, '-')  // 全角ハイフン・マイナス記号・ダッシュ類をASCIIハイフンに
     .replace(/　/g, ' ')
+    .replace(/(\d)\s+[^\d].*$/, '$1')  // 番地の後の余分なテキストを除去（例: 「直売所」「庚申塔」）
     .trim();
 }
 
@@ -508,26 +511,15 @@ async function geocode(query) {
   return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name };
 }
 
-// フォールバック付きジオコード（番地を段階的に省略して再試行）
+// フォールバック付きジオコード（レート制限を守りつつ町名レベルまで短縮）
 async function geocodeWithFallback(address) {
   const normalized = normalizeAddr(address);
 
   // 1. 正規化アドレスでそのまま試す
   try { return await geocode(normalized); } catch(e) {}
 
-  // 2. 末尾の「-数字」を1つ削除（例: 4-5-6 → 4-5）
-  const drop1 = normalized.replace(/-\d+$/, '');
-  if (drop1 !== normalized) {
-    try { return await geocode(drop1); } catch(e) {}
-  }
-
-  // 3. さらに1段削除（例: 4-5 → 4）
-  const drop2 = drop1.replace(/-\d+$/, '');
-  if (drop2 !== drop1) {
-    try { return await geocode(drop2); } catch(e) {}
-  }
-
-  // 4. 数字をすべて除去して町名まで（例: 弦巻4 → 弦巻）
+  // 2. 末尾の数字・番地を除去して丁目レベルで再試行（1.1s待機でレート制限回避）
+  await sleep(1100);
   const townOnly = normalized.replace(/\s*\d[\d-]*$/, '').trim();
   if (townOnly && townOnly !== normalized) {
     try { return await geocode(townOnly); } catch(e) {}
@@ -758,7 +750,6 @@ async function processUserSpots(userSpots, coords, arrivalMin, dow) {
     }
 
     const dist = Math.round(distToRoute(lat, lon, coords));
-    if (dist > 500) continue;
 
     const category = normalizeUserCategory(spot.category);
     result.push({
