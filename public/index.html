@@ -734,18 +734,22 @@ async function processUserSpots(userSpots, coords, arrivalMin, dow) {
 
     if (!lat || !lon) {
       if (!spot.address) continue;
-      try {
-        const cacheKey = normalizeAddr(spot.address);
-        const inCache = cache[cacheKey] && Date.now() - cache[cacheKey].ts < GEO_CACHE_TTL;
-        if (!inCache && i > 0) await sleep(1100); // Nominatim レート制限
-        const geo = await geocodeWithFallback(spot.address);
-        lat = geo.lat; lon = geo.lon;
-        // フォールバック後の結果もキャッシュ
-        cache[cacheKey] = { data: geo, ts: Date.now() };
-        setGeoCache(cache);
-      } catch(e) {
-        console.warn('ユーザースポット ジオコード失敗:', spot.address, e.message);
-        continue;
+      const cacheKey = normalizeAddr(spot.address);
+      const cached = cache[cacheKey];
+      if (cached && Date.now() - cached.ts < GEO_CACHE_TTL) {
+        // キャッシュヒット：Nominatim不要
+        lat = cached.data.lat; lon = cached.data.lon;
+      } else {
+        try {
+          if (i > 0) await sleep(1100); // Nominatim レート制限
+          const geo = await geocodeWithFallback(spot.address);
+          lat = geo.lat; lon = geo.lon;
+          cache[cacheKey] = { data: geo, ts: Date.now() };
+          setGeoCache(cache);
+        } catch(e) {
+          console.warn('ユーザースポット ジオコード失敗:', spot.address, e.message);
+          continue;
+        }
       }
     }
 
